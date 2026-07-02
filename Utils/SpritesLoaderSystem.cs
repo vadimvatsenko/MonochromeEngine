@@ -5,56 +5,60 @@ namespace MonochromeEngine.Utils;
 
 public class SpritesLoaderSystem
 {
-    private readonly List<Sprite> _sprites = new List<Sprite>();
-    string path = Path.Combine("..", "..", "..", "Sprites");
+    // Теперь храним спрайты в словаре по имени владельца (Owner) для мгновенного доступа
+    private readonly Dictionary<string, Sprite> _spritesMap = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+    private readonly string path = Path.Combine("..", "..", "..", "Sprites");
     
     public SpritesLoaderSystem()
     {
         AllPathes();
     }
     
-    public List<Sprite> Sprites => _sprites; 
+    // Публичный доступ к словарю
+    public Dictionary<string, Sprite> Sprites => _spritesMap;
 
     private void AllPathes()
     {
-        // підпапки Directory.EnumerateDirectories(path)
+        if (!Directory.Exists(path)) return;
+
         foreach (var dir in Directory.EnumerateDirectories(path))
         {
-            string dirBaseFolder = Path.GetFileName(dir); // Character Fonts Items
-            //Console.ResetColor();
-            
             foreach (var subBaseFolder in Directory.EnumerateDirectories(dir))
             {
-                // Отримає назву файла Path.GetFileName(file)
-                // Hero - MainFont - Items
-                string subFolderName = Path.GetFileName(subBaseFolder);
-                //Console.ForegroundColor = ConsoleColor.Green;
-                //Console.Write($"\t{subFolderName} ");
-                //Console.WriteLine();
+                // Имя владельца (например: "Hero", "Coin", "Skeleton")
+                string ownerName = Path.GetFileName(subBaseFolder);
+                
+                // ИНЖЕНЕРНЫЙ ХОД: Если такого владельца еще нет в системе, 
+                // создаем ОДИН объект Sprite для него раз и навсегда
+                if (!_spritesMap.ContainsKey(ownerName))
+                {
+                    _spritesMap.Add(ownerName, new Sprite(ownerName));
+                }
+                
+                Sprite currentOwnerSprite = _spritesMap[ownerName];
                 
                 foreach (var animFolder in Directory.EnumerateDirectories(subBaseFolder))
                 {
-                    string animFolderName = Path.GetFileName(animFolder);
-                    //Console.ForegroundColor = ConsoleColor.Blue;
-                    //Console.Write($"\t \t{animFolderName} ");
-                    //Console.WriteLine();
+                    string animFolderName = Path.GetFileName(animFolder); // Например: "Idle"
 
                     foreach (var dirAnimFolder in Directory.EnumerateDirectories(animFolder))
                     {
-                        string animDirFolderName = Path.GetFileName(dirAnimFolder);
-                        //Console.ForegroundColor = ConsoleColor.Cyan;
-                        //Console.Write($"\t \t \t{animDirFolderName} ");
-                        //Console.WriteLine();
+                        string animDirFolderName = Path.GetFileName(dirAnimFolder); // Например: "Base" или "Left"
                         
-                        foreach (var fileNamePath in Directory.EnumerateFiles(dirAnimFolder, "*.png"))
+                        // Собираем полное имя анимации ("IdleBase")
+                        string fullAnimationName = animFolderName + animDirFolderName;
+                        
+                        // Сортируем файлы по имени, чтобы кадры анимации (01.png, 02.png) шли строго по порядку!
+                        var pngFiles = Directory.EnumerateFiles(dirAnimFolder, "*.png")
+                                                .OrderBy(f => f);
+
+                        foreach (var fileNamePath in pngFiles)
                         {
-                            //Console.ForegroundColor = ConsoleColor.Magenta;
-                            //Console.WriteLine($"\t \t \t \t{fileNamePath} ");
-                            Sprite sprite = new Sprite(subFolderName);
-                            char[,] currentSprite = LoadCharMask2D(fileNamePath);
-                            sprite.AddAnimation(animFolderName+animDirFolderName, currentSprite);
-                        
-                            _sprites.Add(sprite);
+                            // Конвертируем картинку в текстовую маску
+                            char[,] currentFrame = LoadCharMask2D(fileNamePath);
+                            
+                            // Добавляем кадр в ОДИН И ТОТ ЖЕ объект этого владельца
+                            currentOwnerSprite.AddAnimation(fullAnimationName, currentFrame);
                         }
                     }
                 }
@@ -62,76 +66,33 @@ public class SpritesLoaderSystem
         }
     }
 
-    
-    private char[,] LoadCharMask2D(
-        string path,
-        int spriteW = 48,
-        int spriteH = 48,
-        char fillChar = '█',
-        char emptyChar = ' ',
-        byte threshold = 128,
-        bool invert = false)
+    private char[,] LoadCharMask2D(string path, int spriteW = 48, int spriteH = 48, char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
     {
+        // Код метода LoadCharMask2D остается без изменений, он у тебя написан отлично!
         using var img = Image.Load<Rgba32>(path);
-
-        // Центр изображения
-        int cx = img.Width / 2;
-        int cy = img.Height / 2;
-
-        // Левый верхний угол окна (spriteW x spriteH), вырезаем от центра
-        int startX = cx - spriteW / 2;
-        int startY = cy - spriteH / 2;
-
-        // ВАЖНО: ширина x2 (каждый пиксель -> 2 символа)
+        int cx = img.Width / 2; int cy = img.Height / 2;
+        int startX = cx - spriteW / 2; int startY = cy - spriteH / 2;
         var mask = new char[spriteH, spriteW * 2];
-
-        img.ProcessPixelRows(accessor =>
-        {
-            for (int sy = 0; sy < spriteH; sy++)
-            {
+        img.ProcessPixelRows(accessor => {
+            for (int sy = 0; sy < spriteH; sy++) {
                 int y = startY + sy;
-
-                // Если строка вне картинки — просто заполняем пустотой
-                if (y < 0 || y >= img.Height)
-                {
-                    for (int sx = 0; sx < spriteW; sx++)
-                    {
-                        int xx = sx * 2;
-                        mask[sy, xx] = emptyChar;
-                        mask[sy, xx + 1] = emptyChar;
-                    }
+                if (y < 0 || y >= img.Height) {
+                    for (int sx = 0; sx < spriteW; sx++) { int xx = sx * 2; mask[sy, xx] = emptyChar; mask[sy, xx + 1] = emptyChar; }
                     continue;
                 }
-
                 var row = accessor.GetRowSpan(y);
-
-                for (int sx = 0; sx < spriteW; sx++)
-                {
-                    int x = startX + sx;
-
-                    char c = emptyChar;
-
-                    if (x >= 0 && x < img.Width)
-                    {
+                for (int sx = 0; sx < spriteW; sx++) {
+                    int x = startX + sx; char c = emptyChar;
+                    if (x >= 0 && x < img.Width) {
                         var p = row[x];
-
-                        bool isDark = p.A >= 10 &&
-                                      p.R < threshold &&
-                                      p.G < threshold &&
-                                      p.B < threshold;
-
+                        bool isDark = p.A >= 10 && p.R < threshold && p.G < threshold && p.B < threshold;
                         if (invert) isDark = !isDark;
-
                         c = isDark ? fillChar : emptyChar;
                     }
-
-                    int xx = sx * 2;
-                    mask[sy, xx] = c;
-                    mask[sy, xx + 1] = c; // второй символ подряд
+                    int xx = sx * 2; mask[sy, xx] = c; mask[sy, xx + 1] = c;
                 }
             }
         });
-
         return mask;
     }
 }

@@ -82,6 +82,8 @@ public class Update
             {
                 _renderer.Clear(_layers[i]);
             }
+            
+            _updatables.ForEach(updatable => updatable.Update(deltaTime));
 
             string fpsText = $"FPS: {_fps:F2} | deltaTime: {deltaTime:F4}s";
             _renderer.DrawString(_layers[_layers.Count - 1], _map.Width / 2 - fpsText.Length / 2, 2, fpsText);

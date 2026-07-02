@@ -7,12 +7,6 @@ public class Program
     public static void Main(string[] args)
     {
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
-
-        List<Sprite> heroSprites = spritesLoaderSystem.Sprites.Where(s => s.Owner == "Hero knight").ToList();
-        List<Sprite> coinsSprites = spritesLoaderSystem.Sprites.Where(s => s.Owner == "Coin").ToList();
-        
-        Console.WriteLine($"Loaded {coinsSprites.Count} sprites");
-
         Map map = new Map(128, 56);
         MonoRenderer renderer = new MonoRenderer();
         
@@ -29,12 +23,11 @@ public class Program
             uiLayer
         };
 
-        Coin coin = new Coin(renderer, backgroundLayer, coinsSprites);
-
+        Coin coin = new Coin(renderer, backgroundLayer, spritesLoaderSystem);
         Update update = new Update(60, renderer, map, allLayers);
+        
         update.AddUpdatable(coin);
         update.RunUpdate();
         
-        Console.ReadKey();
     }
 }
