@@ -16,7 +16,7 @@ public class SpritesLoaderSystem
     
     public List<Sprite> Sprites { get => _sprites; }
 
-    private async void AllPathes()
+    private void AllPathes()
     {
         // підпапки Directory.EnumerateDirectories(path)
         foreach (var dir in Directory.EnumerateDirectories(path))

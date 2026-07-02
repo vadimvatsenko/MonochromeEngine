@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MonochromeEngine")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2b7cdfa1b96beaaea3e0dfc12cf69e6359774f3f")]
 [assembly: System.Reflection.AssemblyProductAttribute("MonochromeEngine")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MonochromeEngine")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

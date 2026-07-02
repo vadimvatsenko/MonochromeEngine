@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "jycmSdwGcw4=",
+  "dgSpecHash": "AkLFN8EILKU=",
   "success": true,
   "projectFilePath": "P:\\Projects and Documents\\Visual Studio Apps\\MonochromeEngine\\MonochromeEngine\\MonochromeEngine.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\user\\.nuget\\packages\\sixlabors.imagesharp\\4.0.0\\sixlabors.imagesharp.4.0.0.nupkg.sha512",
-    "C:\\Users\\user\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512"
+    "C:\\Users\\user\\.nuget\\packages\\sixlabors.imagesharp\\2.1.13\\sixlabors.imagesharp.2.1.13.nupkg.sha512"
   ],
   "logs": []
 }

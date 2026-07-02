@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "MonochromeEngine/1.0.0": {
+        "dependencies": {
+          "SixLabors.ImageSharp": "2.1.13"
+        },
+        "runtime": {
+          "MonochromeEngine.dll": {}
+        }
+      },
+      "SixLabors.ImageSharp/2.1.13": {
+        "runtime": {
+          "lib/netcoreapp3.1/SixLabors.ImageSharp.dll": {
+            "assemblyVersion": "2.0.0.0",
+            "fileVersion": "2.1.13.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MonochromeEngine/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SixLabors.ImageSharp/2.1.13": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zmVHZR13XE477TBAVXE71VcMhqhiv1PbzMWIfuIDytVdBPl3KZlvYYBkqcuQSDdszVY2XHanW98VmDffoNzSSw==",
+      "path": "sixlabors.imagesharp/2.1.13",
+      "hashPath": "sixlabors.imagesharp.2.1.13.nupkg.sha512"
+    }
+  }
+}

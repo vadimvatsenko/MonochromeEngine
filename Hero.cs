@@ -4,7 +4,7 @@ namespace MonochromeEngine;
 
 public class Hero
 {
-    private List<Sprite> _sprites = new List<Sprite>();
+    private readonly List<Sprite> _sprites = new List<Sprite>();
 
     public Hero(List<Sprite> sprites)
     {
@@ -15,7 +15,13 @@ public class Hero
     {
         foreach (var sprite in _sprites)
         {
-            
+            //Console.WriteLine(sprite.Owner);
+            {
+                foreach (var s in sprite.animation)
+                {
+                    Console.WriteLine(s.Key);
+                }
+            }
         }
     }
 }
