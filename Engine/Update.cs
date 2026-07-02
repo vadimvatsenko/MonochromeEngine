@@ -1,10 +1,14 @@
 ﻿using System.Diagnostics;
+using MonochromeEngine.Utils;
 
 namespace MonochromeEngine.Engine;
 
 public class Update
 {
     private readonly List<IUpdatable> _updatables = new List<IUpdatable>();
+    private readonly MonoRenderer _renderer;
+    private readonly List<char[,]> _layers = new List<char[,]>();
+    private readonly Map _map;
 
     // Налаштування цільового FPS
     // Stopwatch — точніший таймер, ніж DateTime.Now
@@ -28,8 +32,11 @@ public class Update
     private int _frames = 0; // скільки кадрів пройшло за поточну секунду
     private double _fpsTimerStartMs; // старт відліку "секунди"
 
-    public Update(int targetFps)
+    public Update(int targetFps, MonoRenderer renderer, Map map, List<char[,]> layers)
     {
+        _map = map;
+        _renderer = renderer;
+        _layers = layers;
         _sw = Stopwatch.StartNew();
         _targetFps = targetFps;
         _targetFrameMs = 1000.0 / _targetFps;
@@ -73,7 +80,20 @@ public class Update
 
             ///////////////////////////////
 
+            // Чистка всіх слоїв открім background
+            for (int i = 1; i < _layers.Count; i++)
+            {
+                _renderer.Clear(_layers[i]);
+            }
 
+            string fpsText = $"FPS: {_fps:F2} | deltaTime: {deltaTime:F4}s";
+            _renderer.DrawString(_layers[_layers.Count - 1], _map.Width / 2 - fpsText.Length / 2, 2, fpsText);
+            // рамка UI
+            _renderer.DrawRect(_layers[_layers.Count - 1], 0, 0, _map.Width, 5, '░');
+            _renderer.DrawRect(_layers[_layers.Count - 1], 1, 0, _map.Width - 2, 5, '░');
+            // --
+            var frame = _renderer.Compose(_map.Width, _map.Height, _layers.ToArray());
+            _renderer.Render(frame);
 
             ////////////////////////////////
 
@@ -100,7 +120,7 @@ public class Update
                 // нічого не робимо — просто чекаємо
             }
 
-            // === 3) ПІДРАХУНОК FPS (раз на ~1 секунду) ==============================
+            // 3) ПІДРАХУНОК FPS (раз на ~1 секунду)
             _frames++;
 
             double passedMs = _sw.Elapsed.TotalMilliseconds - _fpsTimerStartMs;
@@ -110,7 +130,8 @@ public class Update
             {
                 _fps = _frames / (passedMs / 1000.0);
 
-                Console.WriteLine($"FPS: {_fps:F2} | deltaTime: {deltaTime:F4}s");
+                
+                //Console.WriteLine($"FPS: {_fps:F2} | deltaTime: {deltaTime:F4}s");
                 // Показуємо також останній deltaTime для наочності
 
                 // Скидаємо лічильники на наступну секунду

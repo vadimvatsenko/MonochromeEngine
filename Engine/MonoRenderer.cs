@@ -51,7 +51,7 @@ public class MonoRenderer: IRenderer
     }
 
     // Квадрат
-    private void DrawRect(char[,] layer, int x, int y, int w, int h, char c)
+    public void DrawRect(char[,] layer, int x, int y, int w, int h, char c)
     {
         for (int i = 0; i < w; i++)
         {
