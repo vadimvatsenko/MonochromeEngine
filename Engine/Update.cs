@@ -74,11 +74,8 @@ public class Update
 
             // Оновлюємо "останній час" для наступної ітерації
             _lastFrameStartMs = frameStartMs;
-
-            // Тут зазвичай викликають ігрову логіку:
-            // Update(deltaTime);
-
-            ///////////////////////////////
+            
+            ///////////////Тут зазвичай викликають ігрову логіку////////////////
 
             // Чистка всіх слоїв открім background
             for (int i = 1; i < _layers.Count; i++)
@@ -137,7 +134,6 @@ public class Update
                 // Скидаємо лічильники на наступну секунду
                 _frames = 0;
                 _fpsTimerStartMs = _sw.Elapsed.TotalMilliseconds;
-
             }
         }
     }

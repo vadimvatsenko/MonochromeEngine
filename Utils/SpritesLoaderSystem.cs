@@ -5,16 +5,15 @@ namespace MonochromeEngine.Utils;
 
 public class SpritesLoaderSystem
 {
+    private readonly List<Sprite> _sprites = new List<Sprite>();
     string path = Path.Combine("..", "..", "..", "Sprites");
-    
-    private List<Sprite> _sprites = new List<Sprite>();
     
     public SpritesLoaderSystem()
     {
         AllPathes();
     }
     
-    public List<Sprite> Sprites { get => _sprites; }
+    public List<Sprite> Sprites => _sprites; 
 
     private void AllPathes()
     {
@@ -27,7 +26,7 @@ public class SpritesLoaderSystem
             foreach (var subBaseFolder in Directory.EnumerateDirectories(dir))
             {
                 // Отримає назву файла Path.GetFileName(file)
-                // Hero MainFont Items
+                // Hero - MainFont - Items
                 string subFolderName = Path.GetFileName(subBaseFolder);
                 //Console.ForegroundColor = ConsoleColor.Green;
                 //Console.Write($"\t{subFolderName} ");
