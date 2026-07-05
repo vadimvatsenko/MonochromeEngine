@@ -27,7 +27,7 @@ public class BaseGameObject : IUpdatable, IDisposable
     private int _stepX = 2;
     private readonly float _speed = 2f;
     private double _multiplier = 0;
-    private bool _isFlippedX = false;
+    private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
     
@@ -57,18 +57,34 @@ public class BaseGameObject : IUpdatable, IDisposable
             _idleBase = sprites.GetAnimationFrames("IdleBase");
             _moveBase = sprites.GetAnimationFrames("MoveBase");
             _bowBase = sprites.GetAnimationFrames("BowBase");
+            _jumpBase = sprites.GetAnimationFrames("JumpBase");
+            _fallBase = sprites.GetAnimationFrames("FallBase");
         }
 
         _targetAnimation = _moveBase;
 
         _input.OnJump += Jump;
+        _input.OnRight += MoveRight;
+        _input.OnRight += MoveLeft;
     }
 
     public void Update(double deltatime)
     {
-        Move(deltatime);
+        //StopHorizontal();
+        //Move(deltatime);
+        HandleMovement(deltatime);
         Animation(deltatime);
         UpdatePhysics(deltatime);
+        
+        if(_velocity.Y > 0)
+        {
+            _targetAnimation = _fallBase;
+        }
+
+        if (_velocity.Y < 0)
+        {
+            _targetAnimation = _jumpBase;
+        }
     }
 
     private void Animation(double deltatime)
@@ -82,7 +98,7 @@ public class BaseGameObject : IUpdatable, IDisposable
             for (int x = 0; x < width; x += 2) // Идем шагом по 2, так как пиксель "двойной"
             {
                 // Вычисляем правильный индекс чтения по X в зависимости от Flip
-                int readX = _isFlippedX ? (width - 2 - x) : x;
+                int readX = !_isFacingRight ? (width - 2 - x) : x;
 
                 // Берем пару символов, составляющих один консольный пиксель
                 char tileLeft = currentFrame[y, readX];
@@ -128,7 +144,7 @@ public class BaseGameObject : IUpdatable, IDisposable
             }
 
             // 2. Теперь безопасно обновляем направление спрайта
-            _isFlippedX = _stepX < 0;
+            _isFacingRight = _stepX < 0;
 
             // 3. Делаем фактический шаг
             _position.X += _stepX;
@@ -136,6 +152,11 @@ public class BaseGameObject : IUpdatable, IDisposable
             // 4. Правильно уменьшаем таймер, не теряя доли секунд
             _multiplier -= FRAME_DURATION;
         }
+    }
+
+    private void HandleMovement(double deltatime)
+    {
+        _position = _position + _velocity * deltatime;
     }
 
     public void Jump()
@@ -152,9 +173,24 @@ public class BaseGameObject : IUpdatable, IDisposable
         Console.WriteLine($"Position: {_position.X}, {_position.Y} Velocity: {_velocity.X}, {_velocity.Y}");
     }
 
+    private void MoveRight()
+    {
+        _velocity = new Vector2(_speed, _velocity.Y);
+        Console.WriteLine(_velocity.X);
+    }
+
+    private void MoveLeft()
+    {
+        _velocity = new Vector2(-_speed, _velocity.Y);
+        Console.WriteLine("Left");
+    }
+    private void StopHorizontal() => _velocity = new Vector2(0, _velocity.Y);
+
     public void Dispose()
     {
         _input.OnJump -= Jump;
+        _input.OnRight -= MoveRight;
+        _input.OnRight -= MoveLeft;
     }
 }
 
