@@ -15,7 +15,7 @@ public class SpritesLoaderSystem
     }
     
     // Публичный доступ к словарю
-    public Dictionary<string, Sprite> Sprites => _spritesMap;
+    public Dictionary<string, Sprite?> Sprites => _spritesMap;
 
     private void AllPathes()
     {

@@ -9,8 +9,10 @@ public class Program
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
         
+        Input objInput = new Input();
+        
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
-        Map map = new Map(420,160);
+        Map map = new Map(200,60);
         MonoRenderer renderer = new MonoRenderer();
         
         var backgroundLayer = renderer.CreateLayer(map.Width, map.Height);
@@ -26,10 +28,11 @@ public class Program
             uiLayer
         };
 
-        BaseGameObject baseGameObject = new BaseGameObject(renderer, itemsLayer, spritesLoaderSystem, map);
+        BaseGameObject baseGameObject = new BaseGameObject(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
         Update update = new Update(60, renderer, map, allLayers);
         
         update.AddUpdatable(baseGameObject);
+        update.AddUpdatable(objInput);
         update.RunUpdate();
         
     }

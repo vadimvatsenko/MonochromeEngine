@@ -2,8 +2,8 @@
 
 public struct Vector2
 {
-    public int X;
-    public int Y;
+    public float X;
+    public float Y;
 
     public static Vector2 Zero => new Vector2(0, 0);
     public static Vector2 Up => new Vector2(0, -1);
@@ -13,7 +13,7 @@ public struct Vector2
     public static Vector2 One => new Vector2(1, 1);
     public static Vector2 Tree => new Vector2(3, 3);
     
-    public Vector2(int x, int y)
+    public Vector2(float x, float y)
     {
         X = x;
         Y = y;
@@ -21,8 +21,8 @@ public struct Vector2
 
     public static Vector2 Clamp(Vector2 target, Vector2 min, Vector2 max)
     {
-        int x = Math.Clamp(target.X, min.X, max.X);
-        int y = Math.Clamp(target.Y, min.Y, max.Y);
+        float x = Math.Clamp(target.X, min.X, max.X);
+        float y = Math.Clamp(target.Y, min.Y, max.Y);
         return new Vector2(x, y);
     }
        
@@ -34,6 +34,7 @@ public struct Vector2
     public static bool operator !=(Vector2 left, Vector2 right) => !(left == right);
     public static Vector2 operator *(Vector2 left, int numb) => new Vector2(left.X * numb, left.Y * numb);
     public static Vector2 operator /(Vector2 left, int numb) => new Vector2(left.X / numb, left.Y / numb);
+    public static Vector2 operator *(Vector2 left, double numb) => new Vector2(left.X * (float)numb, left.Y * (float)numb);
     public static bool operator <(Vector2 left, Vector2 right) => left.X < right.X && left.Y < right.Y;
     public static bool operator >(Vector2 left, Vector2 right) => left.X > right.X && left.Y > right.Y;
     public static bool operator <=(Vector2 left, Vector2 right) => left.X <= right.X && left.Y <= right.Y;

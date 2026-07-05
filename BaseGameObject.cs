@@ -3,12 +3,13 @@ using MonochromeEngine.Utils;
 
 namespace MonochromeEngine;
 
-public class BaseGameObject : IUpdatable
+public class BaseGameObject : IUpdatable, IDisposable
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly Map _map;
+    private readonly Input _input;
 
     // Sprites
     private List<char[,]> _idleBase;
@@ -22,9 +23,9 @@ public class BaseGameObject : IUpdatable
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(0, 10);
+    private Vector2 _position = new Vector2(0, 20);
     private int _stepX = 2;
-    private readonly float _speed = 5f;
+    private readonly float _speed = 2f;
     private double _multiplier = 0;
     private bool _isFlippedX = false;
     private readonly int _xOffset = 32;
@@ -39,27 +40,35 @@ public class BaseGameObject : IUpdatable
     private const double FRAME_DURATION = 0.125;
     // 
     
-    public BaseGameObject(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
+    // jump logic
+    private Vector2 _velocity = new Vector2(0, 0);
+    private Vector2 _gravity = new Vector2(0, 9.81f);
+    
+    public BaseGameObject(MonoRenderer renderer, Input input, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
     {
+        _input = input;
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
         _map = map;
 
-        if (spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite coinSprite))
+        if (_spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite sprites))
         {
-            _idleBase = coinSprite.GetAnimationFrames("IdleBase");
-            _moveBase = coinSprite.GetAnimationFrames("MoveBase");
-            _bowBase = coinSprite.GetAnimationFrames("BowBase");
+            _idleBase = sprites.GetAnimationFrames("IdleBase");
+            _moveBase = sprites.GetAnimationFrames("MoveBase");
+            _bowBase = sprites.GetAnimationFrames("BowBase");
         }
 
         _targetAnimation = _moveBase;
+
+        _input.OnJump += Jump;
     }
 
     public void Update(double deltatime)
     {
         Move(deltatime);
         Animation(deltatime);
+        UpdatePhysics(deltatime);
     }
 
     private void Animation(double deltatime)
@@ -82,17 +91,16 @@ public class BaseGameObject : IUpdatable
                 // Отрисовка левой половинки пикселя
                 if (tileLeft != ' ')
                 {
-                    _renderer.DrawChar(_layer, x + _position.X, y + _position.Y, tileLeft);
+                    _renderer.DrawChar(_layer, (int)(_position.X + x) , (int)(y + _position.Y), tileLeft);
                 }
                 // Отрисовка правой половинки пикселя
                 if (tileRight != ' ')
                 {
-                    _renderer.DrawChar(_layer, x + 1 + _position.X, y + _position.Y, tileRight);
+                    _renderer.DrawChar(_layer, (int)(x + 1 + _position.X), (int)(y + _position.Y), tileRight);
                 }
             }
         }
-
-        // Логика анимации без изменений...
+        
         _animTimer += deltatime;
         
         if (_animTimer >= FRAME_DURATION)
@@ -112,7 +120,7 @@ public class BaseGameObject : IUpdatable
         while (_multiplier >= FRAME_DURATION)
         {
             // 1. Сначала проверяем, не упремся ли мы в стену НА СЛЕДУЮЩЕМ шаге (Look-ahead)
-            int nextPositionX = _position.X + _stepX;
+            int nextPositionX = (int)(_position.X + _stepX);
         
             if (nextPositionX >= _map.Width - _xOffset || nextPositionX <= 0)
             {
@@ -128,6 +136,25 @@ public class BaseGameObject : IUpdatable
             // 4. Правильно уменьшаем таймер, не теряя доли секунд
             _multiplier -= FRAME_DURATION;
         }
+    }
+
+    public void Jump()
+    {
+        Console.WriteLine("Jumping");
+        _velocity = new Vector2(_velocity.X, -20);
+    }
+    
+    private void UpdatePhysics(double deltatime)
+    {
+        _position = _position + _velocity * deltatime;
+        _velocity = _velocity + _gravity * deltatime;
+        
+        Console.WriteLine($"Position: {_position.X}, {_position.Y} Velocity: {_velocity.X}, {_velocity.Y}");
+    }
+
+    public void Dispose()
+    {
+        _input.OnJump -= Jump;
     }
 }
 
