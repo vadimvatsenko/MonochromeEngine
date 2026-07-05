@@ -72,7 +72,7 @@ public class BaseGameObject : IUpdatable, IDisposable
     {
         //StopHorizontal();
         //Move(deltatime);
-        HandleMovement(deltatime);
+        //HandleMovement(deltatime);
         Animation(deltatime);
         UpdatePhysics(deltatime);
         
@@ -154,10 +154,10 @@ public class BaseGameObject : IUpdatable, IDisposable
         }
     }
 
-    private void HandleMovement(double deltatime)
+    /*private void HandleMovement(double deltatime)
     {
         _position = _position + _velocity * deltatime;
-    }
+    }*/
 
     public void Jump()
     {
@@ -176,13 +176,11 @@ public class BaseGameObject : IUpdatable, IDisposable
     private void MoveRight()
     {
         _velocity = new Vector2(_speed, _velocity.Y);
-        Console.WriteLine(_velocity.X);
     }
 
     private void MoveLeft()
     {
         _velocity = new Vector2(-_speed, _velocity.Y);
-        Console.WriteLine("Left");
     }
     private void StopHorizontal() => _velocity = new Vector2(0, _velocity.Y);
 
