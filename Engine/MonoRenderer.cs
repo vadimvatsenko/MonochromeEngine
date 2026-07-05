@@ -5,6 +5,7 @@ namespace MonochromeEngine.Engine;
 public class MonoRenderer: IRenderer
 {
     private const char Transparent = '\0';
+    private StringBuilder _sb;
 
     // використовується для background, заповнює одним символом повністю квадратну область
     public void Fill(char[,] layer, char s)
@@ -98,19 +99,27 @@ public class MonoRenderer: IRenderer
         int h = frame.GetLength(0);
         int w = frame.GetLength(1);
 
-        var sb = new StringBuilder((w + 1) * h);
-        
+        // Инициализируем буфер один раз с запасом под перенос строк
+        int requiredCapacity = (w + Environment.NewLine.Length) * h;
+        if (_sb == null)
+        {
+            _sb = new StringBuilder(requiredCapacity);
+        }
+        else
+        {
+            _sb.Clear(); // Очищаем без перевыделения памяти
+        }
+    
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
             {
-                sb.Append(frame[y, x]);
+                _sb.Append(frame[y, x]);
             }
-
-            sb.AppendLine(" ");
+            _sb.AppendLine(); // Использует системный перевод строки без лишних пробелов
         }
 
         Console.SetCursorPosition(0, 0);
-        Console.Write(sb.ToString());
+        Console.Write(_sb); // Console.Write умеет принимать StringBuilder напрямую, .ToString() не нужен!
     }
 }

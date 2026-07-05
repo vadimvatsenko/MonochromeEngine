@@ -78,6 +78,7 @@ public class Update
             ///////////////Тут зазвичай викликають ігрову логіку////////////////
 
             // Чистка всіх слоїв открім background
+            
             for (int i = 1; i < _layers.Count; i++)
             {
                 _renderer.Clear(_layers[i]);

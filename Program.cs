@@ -6,8 +6,11 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        Console.Title = "Monochrome Engine - Monochrome Engine";
+        Console.CursorVisible = false;
+        
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
-        Map map = new Map(128, 56);
+        Map map = new Map(420,160);
         MonoRenderer renderer = new MonoRenderer();
         
         var backgroundLayer = renderer.CreateLayer(map.Width, map.Height);
@@ -23,10 +26,10 @@ public class Program
             uiLayer
         };
 
-        Coin coin = new Coin(renderer, backgroundLayer, spritesLoaderSystem);
+        BaseGameObject baseGameObject = new BaseGameObject(renderer, itemsLayer, spritesLoaderSystem, map);
         Update update = new Update(60, renderer, map, allLayers);
         
-        update.AddUpdatable(coin);
+        update.AddUpdatable(baseGameObject);
         update.RunUpdate();
         
     }

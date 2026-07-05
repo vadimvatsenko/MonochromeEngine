@@ -66,33 +66,41 @@ public class SpritesLoaderSystem
         }
     }
 
-    private char[,] LoadCharMask2D(string path, int spriteW = 48, int spriteH = 48, char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
+    private char[,] LoadCharMask2D(string path, char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
     {
-        // Код метода LoadCharMask2D остается без изменений, он у тебя написан отлично!
         using var img = Image.Load<Rgba32>(path);
-        int cx = img.Width / 2; int cy = img.Height / 2;
-        int startX = cx - spriteW / 2; int startY = cy - spriteH / 2;
+    
+        int spriteW = img.Width;
+        int spriteH = img.Height;
+    
+        // Выделяем память: под каждый пиксель по ширине — 2 символа для "квадратности" в консоли
         var mask = new char[spriteH, spriteW * 2];
+    
         img.ProcessPixelRows(accessor => {
-            for (int sy = 0; sy < spriteH; sy++) {
-                int y = startY + sy;
-                if (y < 0 || y >= img.Height) {
-                    for (int sx = 0; sx < spriteW; sx++) { int xx = sx * 2; mask[sy, xx] = emptyChar; mask[sy, xx + 1] = emptyChar; }
-                    continue;
-                }
+            for (int y = 0; y < spriteH; y++) {
                 var row = accessor.GetRowSpan(y);
-                for (int sx = 0; sx < spriteW; sx++) {
-                    int x = startX + sx; char c = emptyChar;
-                    if (x >= 0 && x < img.Width) {
-                        var p = row[x];
-                        bool isDark = p.A >= 10 && p.R < threshold && p.G < threshold && p.B < threshold;
-                        if (invert) isDark = !isDark;
-                        c = isDark ? fillChar : emptyChar;
-                    }
-                    int xx = sx * 2; mask[sy, xx] = c; mask[sy, xx + 1] = c;
+            
+                for (int x = 0; x < spriteW; x++) {
+                    var p = row[x];
+                
+                    // Проверяем на "светлый" или "темный". 
+                    // Твои спрайты 1-битные (черно-белые). 
+                    // Если картинка на черном фоне (как на скриншоте), то пиксели персонажей — белые.
+                    // Давай проверять яркость (R > threshold), либо подкрутим invert.
+                    bool isActiveColor = p.A >= 10 && (p.R > threshold || p.G > threshold || p.B > threshold);
+                
+                    if (invert) isActiveColor = !isActiveColor;
+                
+                    char c = isActiveColor ? fillChar : emptyChar;
+                
+                    // Пишем два символа рядом, чтобы пиксель в консоли был квадратным
+                    int xx = x * 2; 
+                    mask[y, xx] = c; 
+                    mask[y, xx + 1] = c;
                 }
             }
         });
+    
         return mask;
     }
 }

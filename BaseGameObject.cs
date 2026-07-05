@@ -1,0 +1,133 @@
+﻿using MonochromeEngine.Engine;
+using MonochromeEngine.Utils;
+
+namespace MonochromeEngine;
+
+public class BaseGameObject : IUpdatable
+{
+    private readonly SpritesLoaderSystem _spritesLoaderSystem;
+    private readonly char[,] _layer;
+    private readonly MonoRenderer _renderer;
+    private readonly Map _map;
+
+    // Sprites
+    private List<char[,]> _idleBase;
+    private List<char[,]> _moveBase;
+    private List<char[,]> _attackBase;
+    private List<char[,]> _deathBase;
+    private List<char[,]> _jumpBase;
+    private List<char[,]> _fallBase;
+    private List<char[,]> _hitBase;
+    private List<char[,]> _bowBase;
+    private List<char[,]> _targetAnimation;
+
+    // Movement
+    private Vector2 _position = new Vector2(0, 10);
+    private int _stepX = 2;
+    private readonly float _speed = 5f;
+    private double _multiplier = 0;
+    private bool _isFlippedX = false;
+    private readonly int _xOffset = 32;
+    private readonly int _yOffset = 16;
+    
+
+    // animation settings
+    private bool _loop = false;
+    private bool _isFinished = false;
+    private int _spriteIndex = 0;
+    private double _animTimer = 0;
+    private const double FRAME_DURATION = 0.125;
+    // 
+    
+    public BaseGameObject(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
+    {
+        _renderer = renderer;
+        _layer = layer;
+        _spritesLoaderSystem = spritesLoaderSystem;
+        _map = map;
+
+        if (spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite coinSprite))
+        {
+            _idleBase = coinSprite.GetAnimationFrames("IdleBase");
+            _moveBase = coinSprite.GetAnimationFrames("MoveBase");
+            _bowBase = coinSprite.GetAnimationFrames("BowBase");
+        }
+
+        _targetAnimation = _moveBase;
+    }
+
+    public void Update(double deltatime)
+    {
+        Move(deltatime);
+        Animation(deltatime);
+    }
+
+    private void Animation(double deltatime)
+    {
+        var currentFrame = _targetAnimation[_spriteIndex];
+        int height = currentFrame.GetLength(0);
+        int width = currentFrame.GetLength(1); // Это уже удвоенная ширина (например, 32)
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x += 2) // Идем шагом по 2, так как пиксель "двойной"
+            {
+                // Вычисляем правильный индекс чтения по X в зависимости от Flip
+                int readX = _isFlippedX ? (width - 2 - x) : x;
+
+                // Берем пару символов, составляющих один консольный пиксель
+                char tileLeft = currentFrame[y, readX];
+                char tileRight = currentFrame[y, readX + 1];
+
+                // Отрисовка левой половинки пикселя
+                if (tileLeft != ' ')
+                {
+                    _renderer.DrawChar(_layer, x + _position.X, y + _position.Y, tileLeft);
+                }
+                // Отрисовка правой половинки пикселя
+                if (tileRight != ' ')
+                {
+                    _renderer.DrawChar(_layer, x + 1 + _position.X, y + _position.Y, tileRight);
+                }
+            }
+        }
+
+        // Логика анимации без изменений...
+        _animTimer += deltatime;
+        
+        if (_animTimer >= FRAME_DURATION)
+        {
+            _spriteIndex = (_spriteIndex + 1) % _targetAnimation.Count;
+            
+            _animTimer = 0;
+        }
+    }
+
+    private void Move(double deltatime)
+    {
+        // Накапливаем время движения
+        _multiplier += deltatime * _speed;
+
+        // Используем while на случай, если лаг был очень большим и нужно сделать больше 1 шага
+        while (_multiplier >= FRAME_DURATION)
+        {
+            // 1. Сначала проверяем, не упремся ли мы в стену НА СЛЕДУЮЩЕМ шаге (Look-ahead)
+            int nextPositionX = _position.X + _stepX;
+        
+            if (nextPositionX >= _map.Width - _xOffset || nextPositionX <= 0)
+            {
+                _stepX = -_stepX; // Разворачиваемся ДО того, как физически сдвинулись
+            }
+
+            // 2. Теперь безопасно обновляем направление спрайта
+            _isFlippedX = _stepX < 0;
+
+            // 3. Делаем фактический шаг
+            _position.X += _stepX;
+        
+            // 4. Правильно уменьшаем таймер, не теряя доли секунд
+            _multiplier -= FRAME_DURATION;
+        }
+    }
+}
+
