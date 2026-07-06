@@ -13,7 +13,6 @@
 
     <ItemGroup>
       <Folder Include="Animation\" />
-      <Folder Include="Sprites\Ground\" />
     </ItemGroup>
 
 </Project>
