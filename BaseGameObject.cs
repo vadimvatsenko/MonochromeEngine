@@ -13,6 +13,8 @@ public class BaseGameObject : IUpdatable, IDisposable
     private readonly Input _input;
     private BoxCollider2D _collider;
 
+    private AdvanceInput _advanceInput;
+
     // Sprites
     private List<char[,]> _idleBase;
     private List<char[,]> _moveBase;
@@ -25,14 +27,24 @@ public class BaseGameObject : IUpdatable, IDisposable
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(0, 0);
+    private Vector2 _position = new Vector2(32, 0);
     private int _stepX = 2;
-    private readonly float _speed = 2f;
+    private readonly float _speed = 1f;
     private double _multiplier = 0;
     private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
-    
+
+    // Ray
+    private Ray _downGroundRay;
+    private Ray _upGroundRay;
+    private Ray _rightGroundRay;
+    private Ray _leftGroundRay;
+    private bool _isGroundup;
+    private bool _isGroundright;
+    private bool _isGroundleft;
+    private bool _isGrounddown;
+
 
     // animation settings
     private bool _loop = false;
@@ -41,21 +53,31 @@ public class BaseGameObject : IUpdatable, IDisposable
     private double _animTimer = 0;
     private const double FRAME_DURATION = 0.125;
     // 
-    
+
     // jump logic
     private Vector2 _velocity = new Vector2(0, 0);
-    private Vector2 _gravity = new Vector2(0, 9.81f);
+    private Vector2 _gravity = new Vector2(0, 100f);
     private bool _isGround = false;
-    
-    public BaseGameObject(MonoRenderer renderer, Input input, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
+
+    //
+    private double _multy = 0;
+
+    public BaseGameObject(MonoRenderer renderer, Input input, AdvanceInput advanceInput, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
+        Map map)
     {
+        _advanceInput = advanceInput;
         _input = input;
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
         _map = map;
-        
-        _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset + 1));
+
+        _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
+
+        _downGroundRay = new Ray(_position, Vector2.Down, _yOffset + 1);
+        _upGroundRay = new Ray(_position, Vector2.Up, 1);
+        _rightGroundRay = new Ray(_position, Vector2.Right, _xOffset);
+        _leftGroundRay = new Ray(_position, Vector2.Left, 0);
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite sprites))
         {
@@ -71,29 +93,51 @@ public class BaseGameObject : IUpdatable, IDisposable
         _input.OnJump += Jump;
         _input.OnRight += MoveRight;
         _input.OnLeft += MoveLeft;
+        _input.OnDown += MoveDown;
+        
+        /*_advanceInput.OnRightDown += MoveRight;
+        _advanceInput.OnRightHold += MoveRight;
+        _advanceInput.OnLeftDown += MoveLeft;
+        _advanceInput.OnLeftHold += MoveLeft;*/
     }
 
     public void Update(double deltatime)
     {
         //Move(deltatime);
         //StopHorizontal();
-        HandleMovement(deltatime);
-        Animation(deltatime);
         UpdatePhysics(deltatime);
-        
-        if(_velocity.Y > 0.5)
+        HandleMovement(deltatime);
+        CheckGroundAndWalls();
+        Animation(deltatime);
+
+        if (_velocity.Y > 0.5)
         {
             _targetAnimation = _fallBase;
         }
-        else if(_velocity.Y < -0.5)
+        else if (_velocity.Y < -0.5)
         {
             _targetAnimation = _jumpBase;
         }
-        else
+        else if (_velocity.X < -0.5 || _velocity.X > 0.5)
         {
             _targetAnimation = _moveBase;
         }
-        
+        else
+        {
+            _targetAnimation = _idleBase;
+        }
+
+    }
+    
+    private void HandleJumpInput()
+    {
+        // 5. Используем наш новый метод для проверки мгновенного клика по Пробелу
+        /*if (_isGround && _advanceInput.IsActionPressed(AdvanceInput.GameAction.Jump)) 
+        {
+            _velocity = new Vector2(_velocity.X, -55f); // Резкий толчок
+            _position.Y -= 1.5f;                        // Сдвиг от земли
+            _isGround = false; 
+        }*/
     }
 
     private void Animation(double deltatime)
@@ -105,8 +149,7 @@ public class BaseGameObject : IUpdatable, IDisposable
         {
             _spriteIndex = 0;
         }
-        
-        
+
         var currentFrame = _targetAnimation[_spriteIndex];
         int height = currentFrame.GetLength(0);
         int width = currentFrame.GetLength(1); // Это уже удвоенная ширина (например, 32)
@@ -125,8 +168,9 @@ public class BaseGameObject : IUpdatable, IDisposable
                 // Отрисовка левой половинки пикселя
                 if (tileLeft != ' ')
                 {
-                    _renderer.DrawChar(_layer, (int)(_position.X + x) , (int)(y + _position.Y), tileLeft);
+                    _renderer.DrawChar(_layer, (int)(_position.X + x), (int)(y + _position.Y), tileLeft);
                 }
+
                 // Отрисовка правой половинки пикселя
                 if (tileRight != ' ')
                 {
@@ -134,13 +178,13 @@ public class BaseGameObject : IUpdatable, IDisposable
                 }
             }
         }
-        
+
         _animTimer += deltatime;
-        
+
         if (_animTimer >= FRAME_DURATION)
         {
             _spriteIndex = (_spriteIndex + 1) % _targetAnimation.Count;
-            
+
             _animTimer = 0;
         }
     }
@@ -155,7 +199,7 @@ public class BaseGameObject : IUpdatable, IDisposable
         {
             // 1. Сначала проверяем, не упремся ли мы в стену НА СЛЕДУЮЩЕМ шаге (Look-ahead)
             int nextPositionX = (int)(_position.X + _stepX);
-        
+
             if (nextPositionX >= _map.Width - _xOffset || nextPositionX <= 0)
             {
                 _stepX = -_stepX; // Разворачиваемся ДО того, как физически сдвинулись
@@ -166,7 +210,7 @@ public class BaseGameObject : IUpdatable, IDisposable
 
             // 3. Делаем фактический шаг
             _position.X += _stepX;
-        
+
             // 4. Правильно уменьшаем таймер, не теряя доли секунд
             _multiplier -= FRAME_DURATION;
         }
@@ -174,51 +218,39 @@ public class BaseGameObject : IUpdatable, IDisposable
 
     private void HandleMovement(double deltatime)
     {
-        // --- 1. ДВИЖЕНИЕ И КОЛЛИЗИИ ПО ОСИ X ---
+        if (_isGroundright && _velocity.X > 0) return;
+        if (_isGroundleft && _velocity.X < 0) return;
+
         _position.X += _velocity.X;
-        _collider.Position = _position; // Обновляем коллайдер перед проверкой
+        _collider.Position = _position;
+    }
 
-        foreach (var block in _map.Blocks)
+    private void CheckGroundAndWalls()
+    {
+        _upGroundRay.UpdatePosition(_position);
+        _downGroundRay.UpdatePosition(_position);
+        _rightGroundRay.UpdatePosition(_position);
+        _leftGroundRay.UpdatePosition(_position);
+
+        _isGroundup = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
+        _isGroundright = _map.Blocks.Any(s => _rightGroundRay.CheckDetection(s.Collider));
+        _isGroundleft = _map.Blocks.Any(s => _leftGroundRay.CheckDetection(s.Collider));
+        _isGrounddown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
+
+        Console.WriteLine(
+            $"isGroundup: {_isGroundup} isGroundright: {_isGroundright} isGroundleft: {_isGroundleft} isGrounddown: {_isGrounddown}");
+        Console.WriteLine($"VelocityX: {_velocity.X} VelocityY: {_velocity.Y}");
+        Console.WriteLine($"PositionX: {_position.X} PositionY: {_position.Y}");
+
+
+        if (_isGrounddown)
         {
-            if (_collider.IsColliding(block.Collider))
-            {
-                // Если врезались, двигаясь вправо -> выталкиваем влево к левой границе блока
-                if (_velocity.X > 0) 
-                    _position.X = block.Collider.Position.X - _collider.Size.X;
-                // Если врезались, двигаясь влево -> выталкиваем вправо к правой границе блока
-                else if (_velocity.X < 0) 
-                    _position.X = block.Collider.Position.X + block.Collider.Size.X;
-
-                _velocity.X = 0; // Останавливаем горизонтальное движение
-                _collider.Position = _position; // Корректируем коллайдер
-            }
+            _isGround = true;
+            _velocity.Y = 0;
         }
-
-        // --- 2. ДВИЖЕНИЕ И КОЛЛИЗИИ ПО ОСИ Y ---
-        _position.Y += _velocity.Y;
-        _collider.Position = _position; // Обновляем коллайдер перед проверкой
-
-        _isGround = false; // Сбрасываем флаг земли перед проверкой
-
-        foreach (var block in _map.Blocks)
+        else
         {
-            if (_collider.IsColliding(block.Collider))
-            {
-                // Падаем вниз и ударяемся о верх блока (приземление на пол)
-                if (_velocity.Y > 0)
-                {
-                    _position.Y = block.Collider.Position.Y - _collider.Size.Y;
-                    _isGround = true;
-                }
-                // Летим вверх и ударяемся о низ блока (головой в потолок)
-                else if (_velocity.Y < 0)
-                {
-                    _position.Y = block.Collider.Position.Y + block.Collider.Size.Y;
-                }
-
-                _velocity.Y = 0; // Останавливаем вертикальное движение
-                _collider.Position = _position; // Корректируем коллайдер
-            }
+            _isGround = false;
         }
     }
 
@@ -226,30 +258,33 @@ public class BaseGameObject : IUpdatable, IDisposable
     {
         if (_isGround)
         {
-            _velocity = new Vector2(_velocity.X, -3);
+            _velocity = new Vector2(_velocity.X, -60);
+            _isGround = false;
         }
     }
-    
+
     private void UpdatePhysics(double deltatime)
     {
-        Console.WriteLine($"{_isGround}");
-        if (_isGround)
+        if (_isGround) return;
+
+        _position = _position + _velocity * deltatime;
+
+        // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
+        // В этот момент мы умножаем гравитацию на 1.5 или 2, чтобы он падал быстрее!
+        if (_velocity.Y > 0)
         {
-            if (_velocity.Y > 0) 
-            {
-                _velocity.Y = 0; // На земле вертикальная скорость равна 0
-            }
+            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
         }
         else
         {
-            // 1. Сначала плавно увеличиваем скорость падения под действием гравитации
-            // Умножаем на (float)deltatime, чтобы физика не зависела от FPS
-            _velocity.Y += _gravity.Y * (float)deltatime;
+            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
         }
-        
-        Console.WriteLine($"Position: {_position.X}, {_position.Y} Velocity: {_velocity.X}, {_velocity.Y}");
+    
         _collider.Position = new Vector2(_position.X, _position.Y);
     }
+
+
+
 
     private void MoveRight()
     {
@@ -261,7 +296,14 @@ public class BaseGameObject : IUpdatable, IDisposable
     {
         _velocity = new Vector2(-_speed, _velocity.Y);
         _isFacingRight = false;
+
     }
+
+    private void MoveDown()
+    {
+        _velocity = new Vector2(0, _velocity.Y);
+    }
+
     private void StopHorizontal() => _velocity = new Vector2(0, _velocity.Y);
 
     public void Dispose()
@@ -269,6 +311,12 @@ public class BaseGameObject : IUpdatable, IDisposable
         _input.OnJump -= Jump;
         _input.OnRight -= MoveRight;
         _input.OnLeft -= MoveLeft;
+        _input.OnDown -= MoveDown;
+        
+        /*_advanceInput.OnRightDown -= MoveRight;
+        _advanceInput.OnRightHold -= MoveRight;
+        _advanceInput.OnLeftDown -= MoveLeft;
+        _advanceInput.OnLeftHold -= MoveLeft;*/
     }
 }
 

@@ -10,9 +10,10 @@ public class Program
         Console.CursorVisible = false;
         
         Input objInput = new Input();
+        AdvanceInput advanceInput = new AdvanceInput();
         
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
-        Map map = new Map(512,192);
+        Map map = new Map(256,78);
         MonoRenderer renderer = new MonoRenderer();
         
         var backgroundLayer = renderer.CreateLayer(map.Width, map.Height);
@@ -30,7 +31,7 @@ public class Program
             uiLayer
         };
 
-        BaseGameObject baseGameObject = new BaseGameObject(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
+        BaseGameObject baseGameObject = new BaseGameObject(renderer, objInput, advanceInput, itemsLayer, spritesLoaderSystem, map);
 
         int stepBlocksX = 32;
         int stepBlocksY = 16;
@@ -64,6 +65,7 @@ public class Program
         
         update.AddUpdatable(baseGameObject);
         update.AddUpdatable(objInput);
+        update.AddUpdatable(advanceInput);
 
         foreach (var b in allBlocks)
         {
