@@ -19,6 +19,7 @@ public class Program
         var backgroundLayer = renderer.CreateLayer(map.Width, map.Height);
         var groundLayer = renderer.CreateLayer(map.Width, map.Height);
         var itemsLayer = renderer.CreateLayer(map.Width, map.Height);
+        var enemiesLayer = renderer.CreateLayer(map.Width, map.Height);
         var uiLayer = renderer.CreateLayer(map.Width, map.Height);
         
         renderer.Fill(backgroundLayer, '.');
@@ -27,11 +28,13 @@ public class Program
         {
             backgroundLayer,
             groundLayer,
+            enemiesLayer,
             itemsLayer,
             uiLayer
         };
 
         BaseGameObject baseGameObject = new BaseGameObject(renderer, objInput, advanceInput, itemsLayer, spritesLoaderSystem, map);
+        Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map);
 
         int stepBlocksX = 32;
         int stepBlocksY = 16;
@@ -66,6 +69,7 @@ public class Program
         update.AddUpdatable(baseGameObject);
         update.AddUpdatable(objInput);
         update.AddUpdatable(advanceInput);
+        update.AddUpdatable(bat);
 
         foreach (var b in allBlocks)
         {

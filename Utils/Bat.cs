@@ -1,37 +1,28 @@
 ﻿using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
-using MonochromeEngine.Utils;
 
-namespace MonochromeEngine;
+namespace MonochromeEngine.Utils;
 
-public class BaseGameObject : IUpdatable, IDisposable
+public class Bat: IUpdatable
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly Map _map;
-    private readonly Input _input;
     private BoxCollider2D _collider;
-
-    private AdvanceInput _advanceInput;
-
+    
     // Sprites
     private List<char[,]> _idleBase;
-    private List<char[,]> _moveBase;
-    private List<char[,]> _attackBase;
     private List<char[,]> _deathBase;
-    private List<char[,]> _jumpBase;
-    private List<char[,]> _fallBase;
     private List<char[,]> _hitBase;
-    private List<char[,]> _bowBase;
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(32, 0);
+    private Vector2 _position = new Vector2(0, 5);
     private int _stepX = 2;
     private readonly float _speed = 1f;
     private double _multiplier = 0;
-    private bool _isFacingRight = true;
+    private bool _isFacingRight = false;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
 
@@ -44,8 +35,7 @@ public class BaseGameObject : IUpdatable, IDisposable
     private bool _isGroundright;
     private bool _isGroundleft;
     private bool _isGrounddown;
-
-
+    
     // animation settings
     private bool _loop = false;
     private bool _isFinished = false;
@@ -62,11 +52,8 @@ public class BaseGameObject : IUpdatable, IDisposable
     //
     private double _multy = 0;
 
-    public BaseGameObject(MonoRenderer renderer, Input input, AdvanceInput advanceInput, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
-        Map map)
+    public Bat(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
     {
-        _advanceInput = advanceInput;
-        _input = input;
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
@@ -79,56 +66,22 @@ public class BaseGameObject : IUpdatable, IDisposable
         _rightGroundRay = new Ray(_position, Vector2.Right, _xOffset);
         _leftGroundRay = new Ray(_position, Vector2.Left, 0);
 
-        if (_spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite sprites))
+        if (_spritesLoaderSystem.Sprites.TryGetValue("Bat", out Sprite sprites))
         {
             _idleBase = sprites.GetAnimationFrames("IdleBase");
-            _moveBase = sprites.GetAnimationFrames("MoveBase");
-            _bowBase = sprites.GetAnimationFrames("BowBase");
-            _jumpBase = sprites.GetAnimationFrames("JumpBase");
-            _fallBase = sprites.GetAnimationFrames("FallBase");
+            _hitBase = sprites.GetAnimationFrames("HitBase");
+            _deathBase = sprites.GetAnimationFrames("DeadBase");
         }
 
-        _targetAnimation = _moveBase;
-
-        _input.OnJump += Jump;
-        _input.OnRight += MoveRight;
-        _input.OnLeft += MoveLeft;
-        _input.OnDown += MoveDown;
-        
-        /*_advanceInput.OnRightDown += MoveRight;
-        _advanceInput.OnRightHold += MoveRight;
-        _advanceInput.OnLeftDown += MoveLeft;
-        _advanceInput.OnLeftHold += MoveLeft;*/
+        _targetAnimation = _idleBase;
     }
 
     public void Update(double deltatime)
     {
-        //Move(deltatime);
-        //StopHorizontal();
-        
-        
         UpdatePhysics(deltatime);
-        HandleMovement(deltatime);
         CheckGroundAndWalls();
         Animation(deltatime);
-
-        if (_velocity.Y > 0.5)
-        {
-            _targetAnimation = _fallBase;
-        }
-        else if (_velocity.Y < -0.5)
-        {
-            _targetAnimation = _jumpBase;
-        }
-        else if (_velocity.X < -0.5 || _velocity.X > 0.5)
-        {
-            _targetAnimation = _moveBase;
-        }
-        else
-        {
-            _targetAnimation = _idleBase;
-        }
-
+        Move(deltatime);
     }
     
     private void Animation(double deltatime)
@@ -228,10 +181,10 @@ public class BaseGameObject : IUpdatable, IDisposable
         _isGroundleft = _map.Blocks.Any(s => _leftGroundRay.CheckDetection(s.Collider));
         _isGrounddown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
 
-        /*Console.WriteLine(
+        Console.WriteLine(
             $"isGroundup: {_isGroundup} isGroundright: {_isGroundright} isGroundleft: {_isGroundleft} isGrounddown: {_isGrounddown}");
         Console.WriteLine($"VelocityX: {_velocity.X} VelocityY: {_velocity.Y}");
-        Console.WriteLine($"PositionX: {_position.X} PositionY: {_position.Y}");*/
+        Console.WriteLine($"PositionX: {_position.X} PositionY: {_position.Y}");
 
 
         if (_isGrounddown)
@@ -244,69 +197,10 @@ public class BaseGameObject : IUpdatable, IDisposable
             _isGround = false;
         }
     }
-
-    private void Jump()
-    {
-        if (_isGround)
-        {
-            _velocity = new Vector2(_velocity.X, -60);
-            _isGround = false;
-        }
-    }
-
+    
     private void UpdatePhysics(double deltatime)
     {
-        if (_isGround) return;
-
-        _position = _position + _velocity * deltatime;
-
-        // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
-        // В этот момент мы умножаем гравитацию на 1.5 или 2, чтобы он падал быстрее!
-        if (_velocity.Y > 0)
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }
-        else
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }
-    
         _collider.Position = new Vector2(_position.X, _position.Y);
     }
-
-
-
-
-    private void MoveRight()
-    {
-        _velocity = new Vector2(_speed, _velocity.Y);
-        _isFacingRight = true;
-    }
-
-    private void MoveLeft()
-    {
-        _velocity = new Vector2(-_speed, _velocity.Y);
-        _isFacingRight = false;
-    }
-
-    private void MoveDown()
-    {
-        _velocity = new Vector2(0, _velocity.Y);
-    }
-
-    private void StopHorizontal() => _velocity = new Vector2(0, _velocity.Y);
-
-    public void Dispose()
-    {
-        _input.OnJump -= Jump;
-        _input.OnRight -= MoveRight;
-        _input.OnLeft -= MoveLeft;
-        _input.OnDown -= MoveDown;
-        
-        /*_advanceInput.OnRightDown -= MoveRight;
-        _advanceInput.OnRightHold -= MoveRight;
-        _advanceInput.OnLeftDown -= MoveLeft;
-        _advanceInput.OnLeftHold -= MoveLeft;*/
-    }
+    
 }
-
