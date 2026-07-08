@@ -50,6 +50,35 @@ public class MonoRenderer: IRenderer
         for (int i = 0; i < s.Length; i++)
             DrawChar(layer, x + i, y, s[i]);
     }
+    
+    public void DrawLine(char[,] layer, int x0, int y0, int x1, int y1, char symbol)
+    {
+        int dx = Math.Abs(x1 - x0);
+        int dy = Math.Abs(y1 - y0);
+        int sx = x0 < x1 ? 1 : -1;
+        int sy = y0 < y1 ? 1 : -1;
+        int err = dx - dy;
+
+        while (true)
+        {
+            // Рисуем точку (символ) луча
+            DrawChar(layer, x0, y0, symbol);
+
+            if (x0 == x1 && y0 == y1) break;
+            
+            int e2 = 2 * err;
+            if (e2 > -dy)
+            {
+                err -= dy;
+                x0 += sx;
+            }
+            if (e2 < dx)
+            {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
 
     // Квадрат
     public void DrawRect(char[,] layer, int x, int y, int w, int h, char c)

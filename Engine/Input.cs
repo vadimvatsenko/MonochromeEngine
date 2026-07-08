@@ -33,6 +33,9 @@ public class Input : IUpdatable
             case ConsoleKey.Spacebar:
                 OnJump?.Invoke();
                 break;
+            case ConsoleKey.E:
+                OnAttack?.Invoke();
+                break;
         }
     }
 }

@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "/L1qbeY6WwY=",
+  "dgSpecHash": "c6tWc3uHXEk=",
   "success": true,
   "projectFilePath": "P:\\Projects and Documents\\Visual Studio Apps\\MonochromeEngine\\MonochromeEngine\\MonochromeEngine.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\raylib-cs\\8.0.0\\raylib-cs.8.0.0.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\sixlabors.imagesharp\\2.1.13\\sixlabors.imagesharp.2.1.13.nupkg.sha512"
   ],
   "logs": []

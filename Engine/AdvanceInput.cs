@@ -4,45 +4,54 @@ namespace MonochromeEngine.Engine;
 
 public class AdvanceInput: IUpdatable
 {
-    // Храним состояние кнопок для ТЕКУЩЕГО кадра
-    public bool IsLeftActive { get; private set; }
-    public bool IsRightActive { get; private set; }
-    public bool IsJumpActive { get; private set; }
+    // Битовые маски для кнопок (как константы на Ассемблере)
+    public const byte MASK_JUMP  = 1;
+    public const byte MASK_RIGHT = 2;
+    public const byte MASK_LEFT  = 4;
+    public const byte MASK_DOWN  = 8;
+    public const byte MASK_UP    = 16;
 
-    // Храним состояние кнопок для ПРОШЛОГО кадра
-    private bool _isLeftPrevious;
-    private bool _isRightPrevious;
-    private bool _isJumpPrevious;
+    public byte MaskJump => MASK_JUMP;
+    public byte MaskRight => MASK_RIGHT;
+    public byte MaskLeft => MASK_LEFT;
+    public byte MaskDown => MASK_DOWN;
+
+    private byte _current;  // Состояние кнопок СЕЙЧАС
+    private byte _previous; // Состояние кнопок в ПРОШЛОМ кадре
 
     public void Update(double deltaTime)
     {
-        // 1. Запоминаем, что было в прошлом кадре
-        _isLeftPrevious = IsLeftActive;
-        _isRightPrevious = IsRightActive;
-        _isJumpPrevious = IsJumpActive;
+        // 1. Старый кадр уходит в историю
+        _previous = _current;
+        _current = 0; // Сбрасываем текущий кадр перед опросом
 
-        // 2. Сбрасываем текущий кадр перед чтением
-        IsLeftActive = false;
-        IsRightActive = false;
-        IsJumpActive = false;
-
-        // 3. Читаем все нажатые клавиши из консоли
+        // 2. Читаем буфер консоли
         while (Console.KeyAvailable)
         {
             ConsoleKey key = Console.ReadKey(true).Key;
 
-            if (key == ConsoleKey.A || key == ConsoleKey.LeftArrow)   IsLeftActive = true;
-            if (key == ConsoleKey.D || key == ConsoleKey.RightArrow)  IsRightActive = true;
-            if (key == ConsoleKey.Spacebar)                           IsJumpActive = true;
+            // Побитовое сложение (OR), собираем нажатые кнопки в один байт
+            if (key == ConsoleKey.Spacebar)
+            {
+                _current |= MASK_JUMP;
+                Console.Write("Jump");
+            }
+            if (key == ConsoleKey.D || key == ConsoleKey.RightArrow) _current |= MASK_RIGHT;
+            if (key == ConsoleKey.A || key == ConsoleKey.LeftArrow)  _current |= MASK_LEFT;
+            if (key == ConsoleKey.S || key == ConsoleKey.DownArrow)  _current |= MASK_DOWN;
+            if (key == ConsoleKey.W || key == ConsoleKey.UpArrow)    _current |= MASK_UP;
         }
     }
 
-    // --- УДОБНЫЕ СВОЙСТВА ДЛЯ ПЕРСОНАЖА ---
+    // --- НЕСОВСКАЯ ПОБИТОВАЯ МАГИЯ ДЛЯ ПЕРСОНАЖА ---
 
-    // Клик по прыжку: СЕЙЧАС нажата, а РАНЬШЕ не была (сработает строго 1 раз при нажатии!)
-    public bool IsJumpPressedNow => IsJumpActive && !_isJumpPrevious;
+    // Удержание кнопки: проверяем, взведен ли нужный бит сейчас (через побитовое AND)
+    public bool IsHeld(byte buttonMask) => (_current & buttonMask) != 0;
 
-    // Удержание кнопок: просто проверяем, активна ли она прямо сейчас
-    public bool IsLeftHeld => IsLeftActive;
-    public bool IsRightHeld => IsRightActive;
+    // ТОТ САМЫЙ РЕЗКИЙ КЛИК ИЗ NES: Кнопка нажата сейчас AND НЕ была нажата ранее
+    // Формула: Current AND (NOT Previous)
+    public bool IsPressedNow(byte buttonMask) 
+    {
+        return (_current & buttonMask) != 0 && (_previous & buttonMask) == 0;
+    }
 }

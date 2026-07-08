@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using MonochromeEngine.Utils;
+using Raylib_cs;
 
 namespace MonochromeEngine.Engine;
 
@@ -64,7 +65,7 @@ public class Update
     {
         while (true)
         {
-
+            
             // === 1) ПОЧАТОК КАДРУ ==================================================
             double frameStartMs = _sw.Elapsed.TotalMilliseconds;
 

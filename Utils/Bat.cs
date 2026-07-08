@@ -1,5 +1,7 @@
 ﻿using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
+using Raylib_cs;
+using Ray = MonochromeEngine.Engine.Ray;
 
 namespace MonochromeEngine.Utils;
 
@@ -65,6 +67,8 @@ public class Bat: IUpdatable
         _upGroundRay = new Ray(_position, Vector2.Up, 1);
         _rightGroundRay = new Ray(_position, Vector2.Right, _xOffset);
         _leftGroundRay = new Ray(_position, Vector2.Left, 0);
+        
+        DrawRay();
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Bat", out Sprite sprites))
         {
@@ -74,6 +78,11 @@ public class Bat: IUpdatable
         }
 
         _targetAnimation = _idleBase;
+    }
+
+    public void DrawRay()
+    {
+        
     }
 
     public void Update(double deltatime)
