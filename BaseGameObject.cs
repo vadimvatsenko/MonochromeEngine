@@ -4,17 +4,15 @@ using MonochromeEngine.Utils;
 
 namespace MonochromeEngine;
 
-public class BaseGameObject : IUpdatable, IDisposable
+public class BaseGameObject : IUpdatable
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly Map _map;
     private readonly Input _input;
-    private BoxCollider2D _collider;
-
-    private AdvanceInput _advanceInput;
-
+    private readonly BoxCollider2D _collider;
+    
     // Sprites
     private List<char[,]> _idleBase;
     private List<char[,]> _moveBase;
@@ -38,12 +36,10 @@ public class BaseGameObject : IUpdatable, IDisposable
     // Ray
     private Ray _downGroundRay;
     private Ray _upGroundRay;
-    private Ray _rightGroundRay;
-    private Ray _leftGroundRay;
-    private bool _isGroundup;
-    private bool _isGroundright;
-    private bool _isGroundleft;
-    private bool _isGrounddown;
+    private Ray _rightOrLeftGroundRay;
+    private bool _isGroundUp;
+    private bool _isGroundRightOrLeftSide;
+    private bool _isGroundDown;
 
 
     // animation settings
@@ -57,12 +53,10 @@ public class BaseGameObject : IUpdatable, IDisposable
     // jump logic
     private Vector2 _velocity = new Vector2(0, 0);
     private Vector2 _gravity = new Vector2(0, 100f);
-    private bool _isGround = false;
     
-    public BaseGameObject(MonoRenderer renderer, Input input, AdvanceInput advanceInput, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
+    public BaseGameObject(MonoRenderer renderer, Input input, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
         Map map)
     {
-        _advanceInput = advanceInput;
         _input = input;
         _renderer = renderer;
         _layer = layer;
@@ -71,10 +65,17 @@ public class BaseGameObject : IUpdatable, IDisposable
 
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
 
-        _downGroundRay = new Ray(_position, Vector2.Down, _yOffset); // OK
+        _downGroundRay = new Ray(
+            _position + _xOffset / 2, 
+            Vector2.Down, 
+            _yOffset); // OK
+        
         _upGroundRay = new Ray(_position, Vector2.Up, 1);
-        _rightGroundRay = new Ray(new Vector2(_position.X + _xOffset / 2, _position.Y), Vector2.Right, _xOffset / 2); // OK
-        _leftGroundRay = new Ray(_position, Vector2.Left, 0);
+        _rightOrLeftGroundRay 
+            = new Ray(
+                new Vector2(_position.X + _xOffset / 2, _position.Y), 
+                Vector2.Right, 
+                _xOffset / 2); // OK
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Hero", out Sprite sprites))
         {
@@ -88,35 +89,41 @@ public class BaseGameObject : IUpdatable, IDisposable
         }
 
         _targetAnimation = _moveBase;
-
-        //_input.OnJump += Jump;
-        //_input.OnRight += MoveRight;
-        //_input.OnLeft += MoveLeft;
-        _input.OnDown += MoveDown;
-        _input.OnAttack += Attack;
-
-        /*_advanceInput.OnRightDown += MoveRight;
-        _advanceInput.OnRightHold += MoveRight;
-        _advanceInput.OnLeftDown += MoveLeft;
-        _advanceInput.OnLeftHold += MoveLeft;*/
     }
     
-    
-
     public void Update(double deltatime)
     {
-        //Move(deltatime);
-        //StopHorizontal();
-        
+        CheckInput(deltatime);
         
         UpdatePhysics(deltatime);
-        
+        UpdateCollider();
         HandleMovement(deltatime);
         CheckGroundAndWalls();
         Animation(deltatime);
         
-       
+        SwitchAnimation();
+    }
 
+    private void CheckInput(double deltatime)
+    {
+        if (_input.GetKey(ConsoleKey.D))
+            MoveRight();
+        else if(_input.GetKey(ConsoleKey.A))
+            MoveLeft();
+        else
+            StopHorizontal(deltatime);
+
+        if (_input.GetKeyDown(ConsoleKey.Spacebar) && _isGroundDown)
+        {
+            //Console.Clear();
+            Console.WriteLine("Jumping");
+            Console.WriteLine($"VelocityX: {_velocity.X} VelocityY: {_velocity.Y}");
+            Jump();
+        }
+    }
+
+    private void SwitchAnimation()
+    {
         if (_velocity.Y > 0.5)
         {
             _targetAnimation = _fallBase;
@@ -129,11 +136,10 @@ public class BaseGameObject : IUpdatable, IDisposable
         {
             _targetAnimation = _moveBase;
         }
-        else if(_isGround)
+        else if(_isGroundDown)
         {
             _targetAnimation = _idleBase;
         }
-
     }
 
     private void Attack()
@@ -219,20 +225,13 @@ public class BaseGameObject : IUpdatable, IDisposable
 
     private void HandleMovement(double deltatime)
     {
-        if (_isGroundright && _velocity.X > 0)
+        // если уперся в стену, не идём дальше
+        if (_isGroundRightOrLeftSide && (_velocity.X >= 0 || _velocity.X <= 0))
         {
             _targetAnimation = _idleBase;
             return;
         }
-
-        if (_isGroundright && _velocity.X < 0)
-        {
-            _targetAnimation = _idleBase;
-            return;
-        }
-
         
-
         _position.X += _velocity.X;
         _collider.Position = _position;
     }
@@ -241,59 +240,41 @@ public class BaseGameObject : IUpdatable, IDisposable
     {
         _upGroundRay.UpdatePosition(_position);
         _downGroundRay.UpdatePosition(_position);
-        _rightGroundRay.UpdatePosition(new Vector2(_position.X + _xOffset / 2, _position.Y));
-        _leftGroundRay.UpdatePosition(_position);
+        
+        _rightOrLeftGroundRay.UpdatePosition(new Vector2(_position.X + (_xOffset / 2), _position.Y));
 
-        _isGroundup = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
-        _isGroundright = _map.Blocks.Any(s => _rightGroundRay.CheckDetection(s.Collider));
-        _isGroundleft = _map.Blocks.Any(s => _leftGroundRay.CheckDetection(s.Collider));
-        _isGrounddown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
+        _isGroundUp = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
+        _isGroundRightOrLeftSide = _map.Blocks.Any(s => _rightOrLeftGroundRay.CheckDetection(s.Collider));
+        _isGroundDown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
         
         Vector2 direction = _isFacingRight? Vector2.Right : Vector2.Left;
         int offset = _isFacingRight ? _xOffset : -_xOffset;
-        _rightGroundRay.UpdateDirection(direction);
+        _rightOrLeftGroundRay.UpdateDirection(direction);
         
-        _renderer.DrawLine(_layer, (int)_rightGroundRay.Position.X, 
-            (int)_rightGroundRay.Position.Y, 
-            (int)_rightGroundRay.Position.X + (offset / 2), 
-            (int)_rightGroundRay.Position.Y, '▒');
-        
-        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X, 
+        char isRightSymbol = _isGroundRightOrLeftSide ? '+' : '^';
+        _renderer.DrawLine(_layer, (int)_rightOrLeftGroundRay.Position.X, 
+            (int)_rightOrLeftGroundRay.Position.Y, 
+            (int)_rightOrLeftGroundRay.Position.X + (offset / 2), 
+            (int)_rightOrLeftGroundRay.Position.Y, isRightSymbol);
+
+        char isGroundSymbol = _isGroundDown ? '+' : '-';
+        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X + _xOffset / 2, 
             (int)_downGroundRay.Position.Y, 
-            (int)_downGroundRay.Position.X, 
-            (int)_downGroundRay.Position.Y + _yOffset, '▒');
+            (int)_downGroundRay.Position.X + _xOffset / 2, 
+            (int)_downGroundRay.Position.Y + _yOffset, isGroundSymbol);
         
-
-        Console.WriteLine(
-            $"isGroundup: {_isGroundup} isGroundright: {_isGroundright} isGroundleft: {_isGroundleft} isGrounddown: {_isGrounddown}");
-        Console.WriteLine($"VelocityX: {_velocity.X} VelocityY: {_velocity.Y}");
-        Console.WriteLine($"PositionX: {_position.X} PositionY: {_position.Y}");
-
-
-        if (_isGrounddown)
-        {
-            _isGround = true;
-            _velocity.Y = 0;
-        }
-        else
-        {
-            _isGround = false;
-        }
+        
+        _velocity.Y = _isGroundDown? 0 : _velocity.Y;
     }
 
     private void Jump()
     {
-        if (_isGround && _advanceInput.IsPressedNow(_advanceInput.MaskJump))
-        {
-            _velocity = new Vector2(_velocity.X, -60);
-            _isGround = false;
-        }
+        _velocity = new Vector2(_velocity.X, -80);
     }
 
     private void UpdatePhysics(double deltatime)
     {
-        if (_isGround) return;
-
+        
         _position = _position + _velocity * deltatime;
 
         // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
@@ -306,52 +287,28 @@ public class BaseGameObject : IUpdatable, IDisposable
         {
             _velocity = _velocity + (_gravity * 1.8f) * deltatime;
         }
-    
+        
+    }
+
+    private void UpdateCollider()
+    {
         _collider.Position = new Vector2(_position.X, _position.Y);
     }
 
 
-
-
     private void MoveRight()
     {
-        if (_advanceInput.IsHeld(_advanceInput.MaskRight))
-        {
-            _velocity = new Vector2(_speed, _velocity.Y);
-            _isFacingRight = true;
-        }
-        
+        _velocity = new Vector2(_speed, _velocity.Y);
+        _isFacingRight = true;
     }
 
     private void MoveLeft()
     {
-        if (_advanceInput.IsHeld(_advanceInput.MaskLeft))
-        {
-            _velocity = new Vector2(-_speed, _velocity.Y);
-            _isFacingRight = false;
-        }
-        
+        _velocity = new Vector2(-_speed, _velocity.Y);
+        _isFacingRight = false;
     }
-
-    private void MoveDown()
-    {
-        _velocity = new Vector2(0, _velocity.Y);
-    }
-
-    private void StopHorizontal() => _velocity = new Vector2(0, _velocity.Y);
-
-    public void Dispose()
-    {
-        //_input.OnJump -= Jump;
-        //_input.OnRight -= MoveRight;
-        //_input.OnLeft -= MoveLeft;
-        _input.OnDown -= MoveDown;
-        _input.OnAttack -= Attack;
-
-        /*_advanceInput.OnRightDown -= MoveRight;
-        _advanceInput.OnRightHold -= MoveRight;
-        _advanceInput.OnLeftDown -= MoveLeft;
-        _advanceInput.OnLeftHold -= MoveLeft;*/
-    }
+    
+    private void StopHorizontal(double deltaTime) => _velocity = new Vector2(0, _velocity.Y);
+    
 }
 

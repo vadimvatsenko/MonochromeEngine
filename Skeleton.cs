@@ -1,43 +1,46 @@
 ﻿using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
-using Raylib_cs;
-using Ray = MonochromeEngine.Engine.Ray;
+using MonochromeEngine.Utils;
 
-namespace MonochromeEngine.Utils;
+namespace MonochromeEngine;
 
-public class Bat: IUpdatable
+public class Skeleton : IUpdatable
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly Map _map;
-    private BoxCollider2D _collider;
+    private readonly BoxCollider2D _collider;
     
     // Sprites
     private List<char[,]> _idleBase;
-    private List<char[,]> _deathBase;
+    private List<char[,]> _moveBase;
+    private List<char[,]> _attackBase;
+    private List<char[,]> _deadBase;
     private List<char[,]> _hitBase;
+
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(0, 5);
+    private Vector2 _position = new Vector2(128, 0);
     private int _stepX = 2;
-    private readonly float _speed = 1f;
+    private readonly double _speed = 30f;
     private double _multiplier = 0;
-    private bool _isFacingRight = false;
+    private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
+    
+    private double _idleTimer = 0;
 
     // Ray
     private Ray _downGroundRay;
     private Ray _upGroundRay;
-    private Ray _rightGroundRay;
-    private Ray _leftGroundRay;
-    private bool _isGroundup;
-    private bool _isGroundright;
-    private bool _isGroundleft;
-    private bool _isGrounddown;
-    
+    private Ray _rightOrLeftGroundRay;
+    private bool _isGroundUp;
+    private bool _isGroundRightOrLeftSide;
+    private bool _isGroundDown;
+
+
     // animation settings
     private bool _loop = false;
     private bool _isFinished = false;
@@ -47,15 +50,13 @@ public class Bat: IUpdatable
     // 
 
     // jump logic
-    private Vector2 _velocity = new Vector2(0, 0);
+    private Vector2 _velocity = Vector2.Right;
     private Vector2 _gravity = new Vector2(0, 100f);
-    private bool _isGround = false;
-
-    //
-    private double _multy = 0;
-
-    public Bat(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map)
+    
+    public Skeleton(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
+        Map map)
     {
+        
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
@@ -63,35 +64,52 @@ public class Bat: IUpdatable
 
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
 
-        _downGroundRay = new Ray(_position, Vector2.Down, _yOffset);
-        _upGroundRay = new Ray(_position, Vector2.Up, 1);
-        _rightGroundRay = new Ray(_position, Vector2.Right, _xOffset);
-        _leftGroundRay = new Ray(_position, Vector2.Left, 0);
+        _downGroundRay = new Ray(
+            _position + _xOffset / 2, 
+            Vector2.Down, 
+            _yOffset); // OK
         
-        DrawRay();
+        _upGroundRay = new Ray(_position, Vector2.Up, 1);
+        _rightOrLeftGroundRay 
+            = new Ray(
+                new Vector2(_position.X + _xOffset / 2, _position.Y), 
+                Vector2.Right, 
+                _xOffset / 2); // OK
 
-        if (_spritesLoaderSystem.Sprites.TryGetValue("Bat", out Sprite sprites))
+        if (_spritesLoaderSystem.Sprites.TryGetValue("Skeleton", out Sprite sprites))
         {
             _idleBase = sprites.GetAnimationFrames("IdleBase");
-            _hitBase = sprites.GetAnimationFrames("HitBase");
-            _deathBase = sprites.GetAnimationFrames("DeadBase");
+            _moveBase = sprites.GetAnimationFrames("MoveBase");
+            _attackBase = sprites.GetAnimationFrames("AttackBase");
+            _hitBase =  sprites.GetAnimationFrames("HitBase");
+            _deadBase = sprites.GetAnimationFrames("DeadBase");
         }
 
-        _targetAnimation = _idleBase;
+        _targetAnimation = _moveBase;
     }
-
-    public void DrawRay()
-    {
-        
-    }
-
+    
     public void Update(double deltatime)
     {
+        
         UpdatePhysics(deltatime);
+        UpdateCollider();
+        //Move(deltatime);
+        HandleMovement(deltatime);
         CheckGroundAndWalls();
         Animation(deltatime);
-        Move(deltatime);
+        
+        SwitchAnimation();
     }
+    
+
+    private void SwitchAnimation()
+    {
+        if (_velocity.X < -0.5 || _velocity.X > 0.5)
+        {
+            _targetAnimation = _moveBase;
+        }
+    }
+    
     
     private void Animation(double deltatime)
     {
@@ -171,45 +189,83 @@ public class Bat: IUpdatable
 
     private void HandleMovement(double deltatime)
     {
-        if (_isGroundright && _velocity.X > 0) return;
-        if (_isGroundleft && _velocity.X < 0) return;
+        if (_isGroundRightOrLeftSide)
+        {
+                _idleTimer += deltatime;
 
-        _position.X += _velocity.X;
-        _collider.Position = _position;
+                if (_idleTimer <= 2)
+                {
+                    _targetAnimation = _idleBase;
+                    _velocity.X = 0;
+                    return;
+                }
+
+                else
+                {
+                    _isFacingRight = !_isFacingRight;
+                    _velocity = _isFacingRight? Vector2.Left : Vector2.Right;
+                    _idleTimer = 0;
+                }
+                
+        }
+        else
+        {
+            _velocity.X = _isFacingRight ? 1 : -1;
+            _position.X += _velocity.X * (deltatime * _speed);
+        }
+        
     }
 
     private void CheckGroundAndWalls()
     {
         _upGroundRay.UpdatePosition(_position);
         _downGroundRay.UpdatePosition(_position);
-        _rightGroundRay.UpdatePosition(_position);
-        _leftGroundRay.UpdatePosition(_position);
+        
+        _rightOrLeftGroundRay.UpdatePosition(new Vector2(_position.X + (_xOffset / 2), _position.Y));
 
-        _isGroundup = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
-        _isGroundright = _map.Blocks.Any(s => _rightGroundRay.CheckDetection(s.Collider));
-        _isGroundleft = _map.Blocks.Any(s => _leftGroundRay.CheckDetection(s.Collider));
-        _isGrounddown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
+        _isGroundUp = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
+        _isGroundRightOrLeftSide = _map.Blocks.Any(s => _rightOrLeftGroundRay.CheckDetection(s.Collider));
+        _isGroundDown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
+        
+        Vector2 direction = _isFacingRight? Vector2.Right : Vector2.Left;
+        int offset = _isFacingRight ? _xOffset : -_xOffset;
+        _rightOrLeftGroundRay.UpdateDirection(direction);
+        
+        char isRightSymbol = _isGroundRightOrLeftSide ? '+' : '-';
+        _renderer.DrawLine(_layer, (int)_rightOrLeftGroundRay.Position.X, 
+            (int)_rightOrLeftGroundRay.Position.Y, 
+            (int)_rightOrLeftGroundRay.Position.X + (offset / 2), 
+            (int)_rightOrLeftGroundRay.Position.Y, isRightSymbol);
 
-        Console.WriteLine(
-            $"isGroundup: {_isGroundup} isGroundright: {_isGroundright} isGroundleft: {_isGroundleft} isGrounddown: {_isGrounddown}");
-        Console.WriteLine($"VelocityX: {_velocity.X} VelocityY: {_velocity.Y}");
-        Console.WriteLine($"PositionX: {_position.X} PositionY: {_position.Y}");
-
-
-        if (_isGrounddown)
-        {
-            _isGround = true;
-            _velocity.Y = 0;
-        }
-        else
-        {
-            _isGround = false;
-        }
+        char isGroundSymbol = _isGroundDown ? '+' : '-';
+        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X + _xOffset / 2, 
+            (int)_downGroundRay.Position.Y, 
+            (int)_downGroundRay.Position.X + _xOffset / 2, 
+            (int)_downGroundRay.Position.Y + _yOffset, isGroundSymbol);
+        
+        
+        _velocity.Y = _isGroundDown? 0 : _velocity.Y;
     }
     
     private void UpdatePhysics(double deltatime)
     {
-        _collider.Position = new Vector2(_position.X, _position.Y);
+        _position = _position + _velocity * deltatime;
+        _velocity = _velocity + _gravity * deltatime;
+
+        // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
+        // В этот момент мы умножаем гравитацию на 1.5 или 2, чтобы он падал быстрее!
+        /*if (_velocity.Y > 0)
+        {
+            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
+        }
+        else
+        {
+            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
+        }*/
     }
     
+    private void UpdateCollider()
+    {
+        _collider.Position = new Vector2(_position.X, _position.Y);
+    }
 }

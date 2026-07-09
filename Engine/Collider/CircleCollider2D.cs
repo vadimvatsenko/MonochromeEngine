@@ -13,17 +13,17 @@ public class CircleCollider2D : Collider2D
     {
         if (other is CircleCollider2D circle)
         {
-            float distance = (Position - circle.Position).Magnitude();
+            double distance = (Position - circle.Position).Magnitude();
             return distance <= (Radius + circle.Radius);
         }
 
         if (other is BoxCollider2D box)
         {
             // Проверка пересечения круга с прямоугольником
-            float closestX = Math.Clamp(Position.X, box.Position.X, box.Position.X + box.Size.X);
-            float closestY = Math.Clamp(Position.Y, box.Position.Y, box.Position.Y + box.Size.Y);
+            double closestX = Math.Clamp(Position.X, box.Position.X, box.Position.X + box.Size.X);
+            double closestY = Math.Clamp(Position.Y, box.Position.Y, box.Position.Y + box.Size.Y);
 
-            float distance = (new Vector2((int)closestX, (int)closestY) - Position).Magnitude();
+            double distance = (new Vector2((int)closestX, (int)closestY) - Position).Magnitude();
             return distance <= Radius;
         }
 
