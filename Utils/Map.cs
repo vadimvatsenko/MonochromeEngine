@@ -5,7 +5,7 @@ public class Map
     public int Width { get; private set; }
     public int Height { get; private set; }
 
-    public List<Block> Blocks { get; private set; } = new List<Block>();
+    public List<GroundBlock> Blocks { get; private set; } = new List<GroundBlock>();
 
     public Map(int width, int height)
     {
@@ -14,8 +14,8 @@ public class Map
         
     }
     
-    public void SetBlock(Block block)
+    public void SetBlock(GroundBlock groundBlock)
     {
-        Blocks.Add(block);
+        Blocks.Add(groundBlock);
     }
 }

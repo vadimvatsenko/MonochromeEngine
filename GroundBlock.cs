@@ -4,7 +4,7 @@ using MonochromeEngine.Utils;
 
 namespace MonochromeEngine;
 
-public class Block: IUpdatable
+public class GroundBlock: IUpdatable
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
@@ -14,9 +14,8 @@ public class Block: IUpdatable
 
     // Sprites
     private List<char[,]> _idleBase;
-    private List<char[,]> _moveBase;
     private List<char[,]> _targetAnimation;
-
+    
     // Movement
     private Vector2 _position = new Vector2(20, 20);
     private bool _isFacingRight = true;
@@ -31,21 +30,21 @@ public class Block: IUpdatable
     private const double FRAME_DURATION = 0.125;
     // 
     
-    public Block(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map, Vector2 position)
+    public GroundBlock(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem, Map map, Vector2 position, int spriteIndex)
     {
+        
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
         _map = map;
         _position = position;
+        _spriteIndex = spriteIndex;
         
         Collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
 
-        if (_spritesLoaderSystem.Sprites.TryGetValue("Brick", out Sprite sprites))
+        if (_spritesLoaderSystem.Sprites.TryGetValue("Tiles", out Sprite sprites))
         {
             _idleBase = sprites.GetAnimationFrames("IdleBase");
-            _moveBase = sprites.GetAnimationFrames("WalkRight");
-            
         }
 
         _targetAnimation = _idleBase;
@@ -89,13 +88,13 @@ public class Block: IUpdatable
             }
         }
         
-        _animTimer += deltatime;
+        /*_animTimer += deltatime;
         
         if (_animTimer >= FRAME_DURATION)
         {
             _spriteIndex = (_spriteIndex + 1) % _targetAnimation.Count;
             
             _animTimer = 0;
-        }
+        }*/
     }
 }

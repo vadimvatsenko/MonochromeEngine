@@ -20,7 +20,7 @@ public class Bat: IUpdatable
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(0, 5);
+    private Vector2 _position = new Vector2(0, 72);
     private int _stepX = 2;
     private readonly float _speed = 1f;
     private double _multiplier = 0;

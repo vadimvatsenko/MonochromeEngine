@@ -1,5 +1,7 @@
 ﻿using MonochromeEngine;
+using MonochromeEngine.Creatures;
 using MonochromeEngine.Engine;
+using MonochromeEngine.Engine.Levels;
 using MonochromeEngine.Utils;
 using Raylib_cs;
 
@@ -7,13 +9,15 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        // 32 тайла в ширину 512 пикс
+        // 12 тайла высота / 192
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
         
         Input objInput = new Input();
         
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
-        Map map = new Map(256,78);
+        Map map = new Map(576,208);
         MonoRenderer renderer = new MonoRenderer();
         
         var backgroundLayer = renderer.CreateLayer(map.Width, map.Height);
@@ -22,7 +26,7 @@ public class Program
         var enemiesLayer = renderer.CreateLayer(map.Width, map.Height);
         var uiLayer = renderer.CreateLayer(map.Width, map.Height);
         
-        renderer.Fill(backgroundLayer, ' ');
+        renderer.Fill(backgroundLayer, '.');
 
         List<char[,]> allLayers = new List<char[,]>()
         {
@@ -33,35 +37,47 @@ public class Program
             uiLayer
         };
 
-        BaseGameObject baseGameObject = new BaseGameObject(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
+        Hero baseGameObject = new Hero(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
+        //Hero baseGameObject = new Hero(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
         Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map);
         Skeleton skeleton = new Skeleton(renderer, enemiesLayer, spritesLoaderSystem, map);
 
         int stepBlocksX = 32;
         int stepBlocksY = 16;
         
-        int calcCountGroundBlocksX = map.Width / stepBlocksX;
-        int calcCountGroundBlocksY = map.Height / stepBlocksY;
+        List<GroundBlock> allBlocks = new List<GroundBlock>();
 
-        List<Block> allBlocks = new List<Block>();
-        for (int x = 0; x < calcCountGroundBlocksX; x++)
+        // GetLength(0) — это количество СТРОК (высота карты по Y)
+        int mapHeight = LevelModel.Map11.GetLength(0);
+        // GetLength(1) — это количество СТОЛБЦОВ в строке (ширина карты по X)
+        int mapWidth = LevelModel.Map11.GetLength(1);
+
+        // 1. Внешний цикл ВСЕГДА идёт по Y (сверху вниз)
+        for (int y = 0; y < mapHeight; y++)
         {
-            for (int y = 0; y < calcCountGroundBlocksY; y++)
+            // 2. Внутренний цикл ВСЕГДА идёт по X (слева направо)
+            for (int x = 0; x < mapWidth; x++)
             {
-                // Убрали проверку потолка (y == 0)
-                bool isLeftWall   = (x == 0);
-                bool isRightWall  = (x == calcCountGroundBlocksX - 1);
-                bool isFloor      = (y == calcCountGroundBlocksY - 1);
+                // Вытаскиваем ID тайла из массива по правильным индексам [строка, столбец]
+                int tileId = LevelModel.Map11[y, x];
 
-                // Строим блок, если это левая/правая стена или пол
-                if (isLeftWall || isRightWall || isFloor)
-                {
-                    Vector2 blockPosition = new Vector2(x * stepBlocksX, y * stepBlocksY);
-                    Block block = new Block(renderer, groundLayer, spritesLoaderSystem, map, blockPosition);
-            
-                    allBlocks.Add(block);
-                    map.SetBlock(block);
-                }
+                // Если это 0 (воздух), блок создавать не нужно! Пропускаем итерацию.
+                if (tileId == 0) continue;
+
+                // Теперь координаты X и Y умножаются на свои шаги правильно
+                Vector2 pos = new Vector2(x * stepBlocksX, y * stepBlocksY);
+        
+                GroundBlock groundBlock = new GroundBlock(
+                    renderer, 
+                    groundLayer, 
+                    spritesLoaderSystem, 
+                    map, 
+                    pos,
+                    tileId - 1
+                );
+
+                allBlocks.Add(groundBlock);
+                map.SetBlock(groundBlock);
             }
         }
         

@@ -22,7 +22,7 @@ public class Skeleton : IUpdatable
     private List<char[,]> _targetAnimation;
 
     // Movement
-    private Vector2 _position = new Vector2(128, 0);
+    private Vector2 _position = new Vector2(64, 80);
     private int _stepX = 2;
     private readonly double _speed = 30f;
     private double _multiplier = 0;
@@ -218,33 +218,73 @@ public class Skeleton : IUpdatable
 
     private void CheckGroundAndWalls()
     {
+        // Сначала синхронизируем колайдер с текущей позицией из физики
+        UpdateCollider();
+
+        // проверка через колайдер
+        _isGroundRightOrLeftSide = false;
+
+        foreach (var block in _map.Blocks)
+        {
+            if (_collider.IsColliding(block.Collider))
+            {
+                double playerCenterX = _position.X + (_xOffset / 2f);
+                double blockCenterX = block.Collider.Position.X + (block.Collider.Size.X / 2f);
+                
+                // Персонаж считается пересекающим стену, только если его ноги зашли в блок 
+                // МЕНЬШЕ, чем на определенный порог (например, на 3-4 пикселя).
+                // Если он провалился глубже — это уже приземление сверху, а не удар об стену!
+                int skinWidthY = 4;
+                bool isOverlappingVertically =
+                    (_position.Y < block.Collider.Position.Y + block.Collider.Size.Y) &&
+                    (_position.Y + _yOffset - skinWidthY > block.Collider.Position.Y);
+
+                if (isOverlappingVertically)
+                {
+                    // Уперся в левую сторону стены (идешь вправо)
+                    if (playerCenterX < blockCenterX && _velocity.X > 0)
+                    {
+                        _isGroundRightOrLeftSide = true;
+                        _velocity.X = 0;
+                        // Выталкиваем влево
+                        _position.X = block.Collider.Position.X - _xOffset; 
+                        UpdateCollider();
+                        break;
+                    }
+                    // Уперся в правую сторону стены (идешь влево)
+                    else if (playerCenterX > blockCenterX && _velocity.X < 0)
+                    {
+                        _isGroundRightOrLeftSide = true;
+                        _velocity.X = 0;
+                        // Выталкиваем вправо
+                        _position.X = block.Collider.Position.X + block.Collider.Size.X; 
+                        UpdateCollider();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // проверка пола через луч
         _upGroundRay.UpdatePosition(_position);
         _downGroundRay.UpdatePosition(_position);
-        
-        _rightOrLeftGroundRay.UpdatePosition(new Vector2(_position.X + (_xOffset / 2), _position.Y));
-
         _isGroundUp = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
-        _isGroundRightOrLeftSide = _map.Blocks.Any(s => _rightOrLeftGroundRay.CheckDetection(s.Collider));
-        _isGroundDown = _map.Blocks.Any(s => _downGroundRay.CheckDetection(s.Collider));
-        
-        Vector2 direction = _isFacingRight? Vector2.Right : Vector2.Left;
-        int offset = _isFacingRight ? _xOffset : -_xOffset;
-        _rightOrLeftGroundRay.UpdateDirection(direction);
-        
-        char isRightSymbol = _isGroundRightOrLeftSide ? '+' : '-';
-        _renderer.DrawLine(_layer, (int)_rightOrLeftGroundRay.Position.X, 
-            (int)_rightOrLeftGroundRay.Position.Y, 
-            (int)_rightOrLeftGroundRay.Position.X + (offset / 2), 
-            (int)_rightOrLeftGroundRay.Position.Y, isRightSymbol);
 
-        char isGroundSymbol = _isGroundDown ? '+' : '-';
-        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X + _xOffset / 2, 
-            (int)_downGroundRay.Position.Y, 
-            (int)_downGroundRay.Position.X + _xOffset / 2, 
-            (int)_downGroundRay.Position.Y + _yOffset, isGroundSymbol);
-        
-        
-        _velocity.Y = _isGroundDown? 0 : _velocity.Y;
+        var groundBlock = _map.Blocks.FirstOrDefault(s => _downGroundRay.CheckDetection(s.Collider));
+        if (groundBlock != null)
+        {
+            _isGroundDown = true;
+            _velocity.Y = 0;
+            // Выталкиваем строго вверх
+            _position.Y = groundBlock.Collider.Position.Y - _yOffset; 
+        }
+        else
+        {
+            _isGroundDown = false;
+        }
+
+        // Финальный снап колайдера под скорректированную позицию
+        UpdateCollider();
     }
     
     private void UpdatePhysics(double deltatime)

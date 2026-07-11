@@ -12,7 +12,7 @@ public class Update
 
     // Налаштування цільового FPS
     // Stopwatch — точніший таймер, ніж DateTime.Now
-    private readonly Stopwatch _sw;
+    private  readonly Stopwatch _sw;
 
     private readonly int _targetFps;
 
