@@ -18,6 +18,10 @@ A custom, high-performance 2D monochrome ASCII rendering and game engine built e
 
 ---
 
+<p align="center">
+  <img src="IMG/Engine.gif" alt="Engine" width="90%" />
+</p>
+
 ## 🛠️ Project Architecture
 
 The codebase implements a clean, intuitive structure separating core engine systems, mathematics, and gameplay entities:
