@@ -35,7 +35,7 @@ public class Skeleton : IUpdatable
     // Ray
     private Ray _downGroundRay;
     private Ray _upGroundRay;
-    private Ray _rightOrLeftGroundRay;
+    private Ray _rightOrLeftWallRay;
     private bool _isGroundUp;
     private bool _isGroundRightOrLeftSide;
     private bool _isGroundDown;
@@ -65,16 +65,16 @@ public class Skeleton : IUpdatable
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
 
         _downGroundRay = new Ray(
-            _position + _xOffset / 2, 
+            _position + _xOffset + 2, 
             Vector2.Down, 
-            _yOffset); // OK
+            _yOffset + 2); // OK
         
         _upGroundRay = new Ray(_position, Vector2.Up, 1);
-        _rightOrLeftGroundRay 
+        _rightOrLeftWallRay 
             = new Ray(
-                new Vector2(_position.X + _xOffset / 2, _position.Y), 
+                new Vector2(_position.X + _xOffset / 2, _position.Y + _yOffset / 2), 
                 Vector2.Right, 
-                _xOffset / 2); // OK
+                _xOffset / 2 + 8); // OK
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Skeleton", out Sprite sprites))
         {
@@ -90,26 +90,33 @@ public class Skeleton : IUpdatable
     
     public void Update(double deltatime)
     {
-        
-        UpdatePhysics(deltatime);
+        UpdateRay();
+        CheckGroundAndWalls(deltatime);
         UpdateCollider();
-        //Move(deltatime);
+
+        UpdatePhysics(deltatime);
         HandleMovement(deltatime);
-        CheckGroundAndWalls();
         Animation(deltatime);
-        
         SwitchAnimation();
+
+        DrawGizmos();
     }
-    
+
+    private void UpdateRay()
+    {
+        Vector2 direction = _isFacingRight ? Vector2.Right : Vector2.Left;
+        _rightOrLeftWallRay.UpdateDirection(direction);
+    }
+
 
     private void SwitchAnimation()
     {
         if (_velocity.X < -0.5 || _velocity.X > 0.5)
-        {
             _targetAnimation = _moveBase;
-        }
+        
+        if (_velocity.X == 0)
+            _targetAnimation = _idleBase;
     }
-    
     
     private void Animation(double deltatime)
     {
@@ -187,125 +194,59 @@ public class Skeleton : IUpdatable
         }
     }
 
-    private void HandleMovement(double deltatime)
+    private void HandleMovement(double deltatime) => _position.X += _velocity.X * (deltatime * _speed);
+    private void UpdateCollider() => _collider.Position = new Vector2(_position.X, _position.Y);
+    
+    private void CheckGroundAndWalls(double deltaTime)
     {
-        if (_isGroundRightOrLeftSide)
-        {
-                _idleTimer += deltatime;
-
-                if (_idleTimer <= 2)
-                {
-                    _targetAnimation = _idleBase;
-                    _velocity.X = 0;
-                    return;
-                }
-
-                else
-                {
-                    _isFacingRight = !_isFacingRight;
-                    _velocity = _isFacingRight? Vector2.Left : Vector2.Right;
-                    _idleTimer = 0;
-                }
-                
-        }
-        else
-        {
-            _velocity.X = _isFacingRight ? 1 : -1;
-            _position.X += _velocity.X * (deltatime * _speed);
-        }
         
-    }
-
-    private void CheckGroundAndWalls()
-    {
-        // Сначала синхронизируем колайдер с текущей позицией из физики
-        UpdateCollider();
+        _rightOrLeftWallRay.UpdatePosition(_position);
+        _downGroundRay.UpdatePosition(_position);
 
         // проверка через колайдер
-        _isGroundRightOrLeftSide = false;
+        _isGroundRightOrLeftSide = _map.Blocks.Any(block => _rightOrLeftWallRay.CheckDetection(block.Collider));
+        GroundBlock? leftOrRightBlock =
+            _map.Blocks.FirstOrDefault(block => _rightOrLeftWallRay.CheckDetection(block.Collider));
+        _isGroundDown = _map.Blocks.Any(block => _downGroundRay.CheckDetection(block.Collider));
+        GroundBlock? downBlock = _map.Blocks.FirstOrDefault(block => _downGroundRay.CheckDetection(block.Collider));
 
-        foreach (var block in _map.Blocks)
+        Console.WriteLine(_isGroundDown);
+
+        if (_isGroundDown && downBlock != null)
         {
-            if (_collider.IsColliding(block.Collider))
-            {
-                double playerCenterX = _position.X + (_xOffset / 2f);
-                double blockCenterX = block.Collider.Position.X + (block.Collider.Size.X / 2f);
-                
-                // Персонаж считается пересекающим стену, только если его ноги зашли в блок 
-                // МЕНЬШЕ, чем на определенный порог (например, на 3-4 пикселя).
-                // Если он провалился глубже — это уже приземление сверху, а не удар об стену!
-                int skinWidthY = 4;
-                bool isOverlappingVertically =
-                    (_position.Y < block.Collider.Position.Y + block.Collider.Size.Y) &&
-                    (_position.Y + _yOffset - skinWidthY > block.Collider.Position.Y);
-
-                if (isOverlappingVertically)
-                {
-                    // Уперся в левую сторону стены (идешь вправо)
-                    if (playerCenterX < blockCenterX && _velocity.X > 0)
-                    {
-                        _isGroundRightOrLeftSide = true;
-                        _velocity.X = 0;
-                        // Выталкиваем влево
-                        _position.X = block.Collider.Position.X - _xOffset; 
-                        UpdateCollider();
-                        break;
-                    }
-                    // Уперся в правую сторону стены (идешь влево)
-                    else if (playerCenterX > blockCenterX && _velocity.X < 0)
-                    {
-                        _isGroundRightOrLeftSide = true;
-                        _velocity.X = 0;
-                        // Выталкиваем вправо
-                        _position.X = block.Collider.Position.X + block.Collider.Size.X; 
-                        UpdateCollider();
-                        break;
-                    }
-                }
-            }
-        }
-
-        // проверка пола через луч
-        _upGroundRay.UpdatePosition(_position);
-        _downGroundRay.UpdatePosition(_position);
-        _isGroundUp = _map.Blocks.Any(s => _upGroundRay.CheckDetection(s.Collider));
-
-        var groundBlock = _map.Blocks.FirstOrDefault(s => _downGroundRay.CheckDetection(s.Collider));
-        if (groundBlock != null)
-        {
-            _isGroundDown = true;
             _velocity.Y = 0;
-            // Выталкиваем строго вверх
-            _position.Y = groundBlock.Collider.Position.Y - _yOffset; 
-        }
-        else
-        {
-            _isGroundDown = false;
+            _position.Y = downBlock.Position.Y - _yOffset - 1;
         }
 
-        // Финальный снап колайдера под скорректированную позицию
-        UpdateCollider();
+        if (_isGroundRightOrLeftSide && leftOrRightBlock != null)
+        {
+            int targetOffsetX = _isFacingRight ? -_xOffset : _xOffset;
+            
+            _position.X = leftOrRightBlock.Position.X + targetOffsetX;
+            _isFacingRight = !_isFacingRight;
+            _velocity.X = _isFacingRight ? 1 : -1;
+        }
     }
-    
+
+
     private void UpdatePhysics(double deltatime)
     {
         _position = _position + _velocity * deltatime;
-        _velocity = _velocity + _gravity * deltatime;
-
-        // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
-        // В этот момент мы умножаем гравитацию на 1.5 или 2, чтобы он падал быстрее!
-        /*if (_velocity.Y > 0)
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }
-        else
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }*/
+        _velocity = _velocity + (_gravity * 1.8f) * deltatime;
     }
     
-    private void UpdateCollider()
+    public void DrawGizmos(int offset = 16)
     {
-        _collider.Position = new Vector2(_position.X, _position.Y);
+        char isRightSymbol = _isGroundRightOrLeftSide ? '+' : '^';
+        _renderer.DrawLine(_layer, (int)_position.X + _xOffset / 2,
+            (int)_position.Y + _yOffset / 2,
+            (int)(int)_position.X + _xOffset / 2 + 16,
+            (int)_position.Y + _yOffset / 2, isRightSymbol);
+
+        char isGroundSymbol = _isGroundDown ? '+' : '-';
+        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X + _xOffset / 2,
+            (int)_downGroundRay.Position.Y,
+            (int)_downGroundRay.Position.X + _xOffset / 2,
+            (int)_downGroundRay.Position.Y + _yOffset, isGroundSymbol);
     }
 }

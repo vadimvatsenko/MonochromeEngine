@@ -26,7 +26,7 @@ public class Program
         var enemiesLayer = renderer.CreateLayer(map.Width, map.Height);
         var uiLayer = renderer.CreateLayer(map.Width, map.Height);
         
-        renderer.Fill(backgroundLayer, '.');
+        renderer.Fill(backgroundLayer, ' ');
 
         List<char[,]> allLayers = new List<char[,]>()
         {

@@ -17,7 +17,7 @@ public class GroundBlock: IUpdatable
     private List<char[,]> _targetAnimation;
     
     // Movement
-    private Vector2 _position = new Vector2(20, 20);
+    public Vector2 Position { get; private set; } = new Vector2(20, 20);
     private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
@@ -37,10 +37,10 @@ public class GroundBlock: IUpdatable
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
         _map = map;
-        _position = position;
+        Position = position;
         _spriteIndex = spriteIndex;
         
-        Collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
+        Collider = new BoxCollider2D(Position, new Vector2(_xOffset, _yOffset));
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Tiles", out Sprite sprites))
         {
@@ -78,12 +78,12 @@ public class GroundBlock: IUpdatable
                 // Отрисовка левой половинки пикселя
                 if (tileLeft != ' ')
                 {
-                    _renderer.DrawChar(_layer, (int)(_position.X + x) , (int)(y + _position.Y), tileLeft);
+                    _renderer.DrawChar(_layer, (int)(Position.X + x) , (int)(y + Position.Y), tileLeft);
                 }
                 // Отрисовка правой половинки пикселя
                 if (tileRight != ' ')
                 {
-                    _renderer.DrawChar(_layer, (int)(x + 1 + _position.X), (int)(y + _position.Y), tileRight);
+                    _renderer.DrawChar(_layer, (int)(x + 1 + Position.X), (int)(y + Position.Y), tileRight);
                 }
             }
         }

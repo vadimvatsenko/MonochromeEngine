@@ -11,33 +11,9 @@ public class TextAnimator
     private bool _isStatic = false;
     private readonly string _name;
     
-    // Sprites
-    public List<char[,]> A { get; private set; }
-    public List<char[,]> B { get; private set; }
-    public List<char[,]> C { get; private set; }
-    public List<char[,]> D { get; private set; }
-    public List<char[,]> E { get; private set; }
-    public List<char[,]> F { get; private set; }
-    public List<char[,]> G { get; private set; }
-    public List<char[,]> H { get; private set; }
-    public List<char[,]> I { get; private set; }
-    public List<char[,]> J { get; private set; }
-    public List<char[,]> L { get; private set; }
-    public List<char[,]> M { get; private set; }
-    public List<char[,]> N { get; private set; }
-    public List<char[,]> O { get; private set; }
-    public List<char[,]> P { get; private set; }
-    public List<char[,]> Q { get; private set; }
-    public List<char[,]> R { get; private set; }
-    public List<char[,]> S { get; private set; }
-    public List<char[,]> T { get; private set; }
-    public List<char[,]> V { get; private set; }
-    public List<char[,]> W { get; private set; }
-    public List<char[,]> X { get; private set; }
-    public List<char[,]> Y { get; private set; }
-    public List<char[,]> Z { get; private set; }
+    private const string WORDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private Dictionary<char, List<char[,]>> _wordsDictionary = new Dictionary<char, List<char[,]>>();
     
-
     private List<char[,]> _targetAnimation;
 
     public List<char[,]> TargetAnimation
@@ -61,27 +37,20 @@ public class TextAnimator
         _spritesLoaderSystem = spritesLoaderSystem;
         _isStatic = isStatic;
         _layer = layer;
-        
-        if (_spritesLoaderSystem.Sprites.TryGetValue(name, out Sprite sprites))
+
+        foreach (var w in WORDS)
         {
-            A = sprites.GetAnimationFrames("IdleBase");
-            B = sprites.GetAnimationFrames("MoveBase");
-            C = sprites.GetAnimationFrames("BowBase");
-            D = sprites.GetAnimationFrames("JumpBase");
-            E = sprites.GetAnimationFrames("FallBase");
-            F = sprites.GetAnimationFrames("AttackBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
-            G = sprites.GetAnimationFrames("DeadBase");
+            if (_spritesLoaderSystem.Sprites.TryGetValue(name, out Sprite sprites))
+            {
+                _wordsDictionary.Add(w, sprites.GetAnimationFrames($"Idle + {w}"));
+            }
         }
 
-        _targetAnimation = A;
+        Console.WriteLine(_wordsDictionary.Count);
+        Console.ReadKey();
+
+
+        //_targetAnimation = A;
     }
     
     public void RunAnimation(double deltatime, bool isFacingRight, Vector2 position)

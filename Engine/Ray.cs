@@ -6,7 +6,7 @@ public class Ray
 {
     public Vector2 Position { get; private set; }
     public Vector2 Direction { get; private set; }
-    private int _length;
+    private readonly int _length;
 
     public Ray(Vector2 position, Vector2 direction, int length)
     {
@@ -29,7 +29,6 @@ public class Ray
     }
     
     public void UpdateDirection(Vector2 direction) => Direction = direction;
-    
     public void UpdatePosition(Vector2 position) => Position = position;
     
 }
