@@ -14,7 +14,7 @@ public class Program
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
         
-        Input objInput = new Input();
+        Input input = new Input();
         
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
         Map map = new Map(576,208);
@@ -37,7 +37,7 @@ public class Program
             uiLayer
         };
 
-        Hero baseGameObject = new Hero(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
+        Hero baseGameObject = new Hero(renderer, input, itemsLayer, spritesLoaderSystem, map);
         //Hero baseGameObject = new Hero(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
         Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map);
         Skeleton skeleton = new Skeleton(renderer, enemiesLayer, spritesLoaderSystem, map);
@@ -81,10 +81,10 @@ public class Program
             }
         }
         
-        Update update = new Update(60, renderer, map, allLayers);
+        Update update = new Update(60, renderer, map, input, allLayers);
         
         update.AddUpdatable(baseGameObject);
-        update.AddUpdatable(objInput);
+        update.AddUpdatable(input);
         update.AddUpdatable(bat);
         update.AddUpdatable(skeleton);
 

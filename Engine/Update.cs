@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using MonochromeEngine.Scene;
 using MonochromeEngine.Utils;
 
 namespace MonochromeEngine.Engine;
@@ -9,6 +10,7 @@ public class Update
     private readonly MonoRenderer _renderer;
     private readonly List<char[,]> _layers = new List<char[,]>();
     private readonly Map _map;
+    private readonly Input _input;
 
     // Налаштування цільового FPS
     // Stopwatch — точніший таймер, ніж DateTime.Now
@@ -32,11 +34,12 @@ public class Update
     private int _frames = 0; // скільки кадрів пройшло за поточну секунду
     private double _fpsTimerStartMs; // старт відліку "секунди"
 
-    public Update(int targetFps, MonoRenderer renderer, Map map, List<char[,]> layers)
+    public Update(int targetFps, MonoRenderer renderer, Map map, Input input, List<char[,]> layers)
     {
         _map = map;
         _renderer = renderer;
         _layers = layers;
+        _input = input;
         _sw = Stopwatch.StartNew();
         _targetFps = targetFps;
         _targetFrameMs = 1000.0 / _targetFps;
@@ -62,6 +65,7 @@ public class Update
 
     public void RunUpdate()
     {
+        SceneManager.ChangeScene(new MainMenuScene(_input));
         while (true)
         {
             
