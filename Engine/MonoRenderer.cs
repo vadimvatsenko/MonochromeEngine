@@ -4,7 +4,7 @@ namespace MonochromeEngine.Engine;
 
 public class MonoRenderer: IRenderer
 {
-    private const char Transparent = '\0';
+    private const char Transparent = ' ';
     private StringBuilder _sb;
 
     // використовується для background, заповнює одним символом повністю квадратну область
@@ -102,6 +102,7 @@ public class MonoRenderer: IRenderer
     public char[,] Compose(int w, int h, params char[][,] layers)
     {
         var outFrame = new char[h, w];
+        bool hasContent = false;
 
         for (int y = 0; y < h; y++)
         {
@@ -112,12 +113,17 @@ public class MonoRenderer: IRenderer
                 {
                     char c = layer[y, x];
                     if (c != Transparent)
+                    {
                         result = c;
+                        hasContent = true;
+                    }
                 }
 
                 outFrame[y, x] = result;
             }
         }
+        
+        if (hasContent) Console.WriteLine("Compose: Rendered content detected.");
 
         return outFrame;
     }

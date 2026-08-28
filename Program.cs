@@ -1,9 +1,8 @@
-﻿using MonochromeEngine;
+using MonochromeEngine;
 using MonochromeEngine.Creatures;
 using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Levels;
 using MonochromeEngine.Utils;
-using Raylib_cs;
 
 public class Program
 {
@@ -38,8 +37,7 @@ public class Program
         };
 
         Hero baseGameObject = new Hero(renderer, input, itemsLayer, spritesLoaderSystem, map);
-        //Hero baseGameObject = new Hero(renderer, objInput, itemsLayer, spritesLoaderSystem, map);
-        Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map);
+        Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map, new Vector2(100, 50));
         Skeleton skeleton = new Skeleton(renderer, enemiesLayer, spritesLoaderSystem, map);
 
         int stepBlocksX = 32;
@@ -94,8 +92,5 @@ public class Program
         }
         
         update.RunUpdate();
-        
-        
     }
 }
-

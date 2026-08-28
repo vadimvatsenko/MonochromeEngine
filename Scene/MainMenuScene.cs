@@ -1,26 +1,45 @@
-﻿using MonochromeEngine.Scene;
+﻿using MonochromeEngine.Engine;
+using MonochromeEngine.Scene;
+using MonochromeEngine.Utils;
 
 public class MainMenuScene : IScene
 {
     private readonly Input _input;
+    private readonly MonoRenderer _renderer;
+    private readonly char[,] _uiLayer;
+    private readonly FontService _fontService;
+    
+    // Зависимости для GameplayScene
+    private readonly SpritesLoaderSystem _spritesLoaderSystem;
+    private readonly Map _map;
+    private readonly List<char[,]> _allLayers;
 
-    public MainMenuScene(Input input) => _input = input;
+    public MainMenuScene(Input input, MonoRenderer renderer, char[,] uiLayer, FontService fontService, 
+                         SpritesLoaderSystem spritesLoaderSystem, Map map, List<char[,]> allLayers)
+    {
+        _input = input;
+        _renderer = renderer;
+        _uiLayer = uiLayer;
+        _fontService = fontService;
+        _spritesLoaderSystem = spritesLoaderSystem;
+        _map = map;
+        _allLayers = allLayers;
+    }
 
-    public void Initialize() { /* Сброс настроек меню */ }
+    public void Initialize() { }
 
     public void Update(double deltaTime)
     {
-        // Если игрок нажал Enter — запускаем первый уровень
         if (_input.GetKeyDown(ConsoleKey.Enter))
         {
-            SceneManager.ChangeScene(new GameplayScene(_input, 1)); // Загружаем 1-й уровень
+            SceneManager.ChangeScene(new GameplayScene(_input, _renderer, _spritesLoaderSystem, _map, _uiLayer, _allLayers));
         }
     }
 
     public void Draw()
     {
-        // Отрисовка текста меню через твой _renderer
-        // _renderer.DrawString(..., "=== MONOCHROME ENGINE ===");
-        // _renderer.DrawString(..., "Press ENTER to Start");
+        _renderer.Fill(_uiLayer, ' ');
+        _fontService.DrawText(_renderer, _uiLayer, "MONOCHROME", 10, 5);
+        _fontService.DrawText(_renderer, _uiLayer, "START", 10, 15);
     }
 }

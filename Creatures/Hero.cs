@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using MonochromeEngine.Animation;
 using MonochromeEngine.Collisions;
 using MonochromeEngine.Engine;
@@ -16,7 +16,7 @@ public class Hero: IUpdatable
     // Movement
     private Vector2 _position = new Vector2(32, 100);
     private int _stepX = 2;
-    private readonly float _speed = 6f;
+    private readonly float _speed = 100f;
     private double _multiplier = 0;
     private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
@@ -41,19 +41,41 @@ public class Hero: IUpdatable
         
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
         _animator = new BaseAnimator(spritesLoaderSystem, renderer, "Hero", layer);
-        _collisionSystem = new BaseCollisionSystem(map, _collider, renderer, layer, _position, _xOffset, _yOffset);
+        _collisionSystem = new BaseCollisionSystem(map, _collider);
     }
     
     public void Update(double deltatime)
     {
+        // Управление таймерами для прыжка
+        if (_collisionSystem.IsGrounded)
+        {
+            _coyoteJumpActivated = _coyoteJumpWindow;
+        }
+        else
+        {
+            _coyoteJumpActivated -= deltatime;
+        }
+
+        if (_bufferJumpActivated > 0)
+        {
+            _bufferJumpActivated -= (float)deltatime;
+        }
+
         CheckInput(deltatime);
         UpdatePhysics(deltatime);
-        UpdateCollider();
-        HandleMovement(deltatime);
-        _collisionSystem.CheckGroundAndWalls(ref _position, ref _velocity);
+        
+        // Передаем размер коллайдера и deltatime для корректного выталкивания
+        _collisionSystem.ResolveCollisions(ref _position, ref _velocity, new Vector2(_xOffset, _yOffset), deltatime);
+        
+        // Автоматический прыжок, если сработал буфер и мы приземлились
+        if (_bufferJumpActivated > 0 && _collisionSystem.IsGrounded)
+        {
+            Jump();
+            _bufferJumpActivated = -1;
+        }
+        
         _animator.RunAnimation(deltatime, _isFacingRight, _position);
 
-        //UpdateAirBornStatus();
         SwitchAnimation();
     }
 
@@ -66,12 +88,18 @@ public class Hero: IUpdatable
         else
             StopHorizontal(deltatime);
 
-        /*if (_input.GetKeyDown(ConsoleKey.Spacebar) && _collisionSystem.IsGroundDown)
-            Jump();*/
-        
-        if (_input.GetKeyDown(ConsoleKey.Spacebar) && _collisionSystem.IsGroundDown)
+        if (_input.GetKeyDown(ConsoleKey.Spacebar))
         {
-            Jump();
+            if (_coyoteJumpActivated > 0)
+            {
+                Jump();
+                _coyoteJumpActivated = -1;
+            }
+            else
+            {
+                // Если не в воздухе (или не в окне койота), ставим в буфер
+                _bufferJumpActivated = _bufferJumpWindow;
+            }
         }
     }
     
@@ -89,7 +117,7 @@ public class Hero: IUpdatable
         {
             _animator.TargetAnimation = _animator.MoveBase;
         }
-        else if(_collisionSystem.IsGroundDown)
+        else if(_collisionSystem.IsGrounded)
         {
             _animator.TargetAnimation = _animator.IdleBase;
         }
@@ -97,33 +125,14 @@ public class Hero: IUpdatable
     
     private void HandleMovement(double deltatime)
     {
-        // если уперся в стену, не идём дальше
-        if (_collisionSystem.IsGroundRightOrLeftSide && (_velocity.X >= 0 || _velocity.X <= 0))
-        {
-            _animator.TargetAnimation = _animator.IdleBase;
-            return;
-        }
-        
-        _position.X += _velocity.X;
-        _collider.Position = _position;
     }
 
-    private void Jump() => _velocity = new Vector2(_velocity.X, -80);
+    private void Jump() => _velocity = new Vector2(_velocity.X, -120);
     
     private void UpdatePhysics(double deltatime)
     {
-        _position = _position + _velocity * deltatime;
-
-        // Если _velocity.Y > 0, значит персонаж уже прошел пик прыжка и падает.
-        // В этот момент мы умножаем гравитацию на 1.5 или 2, чтобы он падал быстрее!
-        if (_velocity.Y > 0)
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }
-        else
-        {
-            _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-        }
+        // Теперь применяем только гравитацию к velocity
+        _velocity = _velocity + (_gravity * 1.8f) * deltatime;
     }
 
     private void UpdateCollider() => _collider.Position = new Vector2(_position.X, _position.Y);

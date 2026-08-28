@@ -18,4 +18,14 @@ public class Map
     {
         Blocks.Add(groundBlock);
     }
+
+    public bool IsBlockAt(int x, int y)
+    {
+        // Проверяем, попадает ли точка x, y в границы какого-либо коллайдера блока
+        return Blocks.Any(block => 
+            x >= block.Collider.Position.X && 
+            x <= block.Collider.Position.X + block.Collider.Size.X &&
+            y >= block.Collider.Position.Y &&
+            y <= block.Collider.Position.Y + block.Collider.Size.Y);
+    }
 }

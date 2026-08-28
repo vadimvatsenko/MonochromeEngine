@@ -1,4 +1,6 @@
-﻿using MonochromeEngine.Engine;
+using MonochromeEngine.Animation;
+using MonochromeEngine.Collisions;
+using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
 using MonochromeEngine.Utils;
 
@@ -9,8 +11,9 @@ public class Skeleton : IUpdatable
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
-    private readonly Map _map;
     private readonly BoxCollider2D _collider;
+    private readonly BaseCollisionSystem _collisionSystem;
+    private readonly Map _map;
     
     // Sprites
     private List<char[,]> _idleBase;
@@ -23,58 +26,29 @@ public class Skeleton : IUpdatable
 
     // Movement
     private Vector2 _position = new Vector2(64, 80);
-    private int _stepX = 2;
-    private readonly double _speed = 30f;
-    private double _multiplier = 0;
     private bool _isFacingRight = true;
     private readonly int _xOffset = 32;
     private readonly int _yOffset = 16;
     
-    private double _idleTimer = 0;
-
-    // Ray
-    private Ray _downGroundRay;
-    private Ray _upGroundRay;
-    private Ray _rightOrLeftWallRay;
-    private bool _isGroundUp;
-    private bool _isGroundRightOrLeftSide;
-    private bool _isGroundDown;
-
-
     // animation settings
-    private bool _loop = false;
-    private bool _isFinished = false;
     private int _spriteIndex = 0;
     private double _animTimer = 0;
     private const double FRAME_DURATION = 0.125;
-    // 
 
-    // jump logic
-    private Vector2 _velocity = Vector2.Right;
+    // Physics
+    private Vector2 _velocity = new Vector2(30f, 0); // Начальная скорость вправо
     private Vector2 _gravity = new Vector2(0, 100f);
     
     public Skeleton(MonoRenderer renderer, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
         Map map)
     {
-        
         _renderer = renderer;
         _layer = layer;
         _spritesLoaderSystem = spritesLoaderSystem;
-        _map = map;
 
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
-
-        _downGroundRay = new Ray(
-            _position + _xOffset + 2, 
-            Vector2.Down, 
-            _yOffset + 2); // OK
-        
-        _upGroundRay = new Ray(_position, Vector2.Up, 1);
-        _rightOrLeftWallRay 
-            = new Ray(
-                new Vector2(_position.X + _xOffset / 2, _position.Y + _yOffset / 2), 
-                Vector2.Right, 
-                _xOffset / 2 + 8); // OK
+        _map = map;
+        _collisionSystem = new BaseCollisionSystem(map, _collider);
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Skeleton", out Sprite sprites))
         {
@@ -90,31 +64,43 @@ public class Skeleton : IUpdatable
     
     public void Update(double deltatime)
     {
-        UpdateRay();
-        CheckGroundAndWalls(deltatime);
-        UpdateCollider();
-
         UpdatePhysics(deltatime);
-        HandleMovement(deltatime);
+        
+        // Разрешаем столкновения через единую систему
+        _collisionSystem.ResolveCollisions(ref _position, ref _velocity, new Vector2(_xOffset, _yOffset), deltatime);
+
+        // --- ЛОГИКА ОБНАРУЖЕНИЯ ПРОПАСТЕЙ ---
+        if (_collisionSystem.IsGrounded)
+        {
+            // Проверяем блок впереди-внизу
+            double checkX = _position.X + (_isFacingRight ? _xOffset : 0);
+            double checkY = _position.Y + _yOffset + 2; // Чуть ниже ног
+            
+            if (!_map.IsBlockAt((int)checkX, (int)checkY))
+            {
+                // Пропасть найдена! Разворачиваемся.
+                _velocity.X = -_velocity.X;
+                _isFacingRight = !_isFacingRight;
+            }
+        }
+        // ------------------------------------
+
+        // Логика разворота при ударе о стену
+        if (Math.Abs(_velocity.X) < 0.1f) 
+        {
+            _velocity.X = _isFacingRight ? -30f : 30f;
+            _isFacingRight = !_isFacingRight;
+        }
+
         Animation(deltatime);
         SwitchAnimation();
-
-        DrawGizmos();
     }
-
-    private void UpdateRay()
-    {
-        Vector2 direction = _isFacingRight ? Vector2.Right : Vector2.Left;
-        _rightOrLeftWallRay.UpdateDirection(direction);
-    }
-
 
     private void SwitchAnimation()
     {
-        if (_velocity.X < -0.5 || _velocity.X > 0.5)
+        if (Math.Abs(_velocity.X) > 0.5)
             _targetAnimation = _moveBase;
-        
-        if (_velocity.X == 0)
+        else
             _targetAnimation = _idleBase;
     }
     
@@ -122,131 +108,36 @@ public class Skeleton : IUpdatable
     {
         if (_targetAnimation == null || _targetAnimation.Count == 0) return;
 
-        // Корректируем индекс, если он почему-то вылетел за границы (например, при баге в другом месте)
-        if (_spriteIndex >= _targetAnimation.Count)
-        {
-            _spriteIndex = 0;
-        }
+        if (_spriteIndex >= _targetAnimation.Count) _spriteIndex = 0;
 
         var currentFrame = _targetAnimation[_spriteIndex];
         int height = currentFrame.GetLength(0);
-        int width = currentFrame.GetLength(1); // Это уже удвоенная ширина (например, 32)
+        int width = currentFrame.GetLength(1);
 
         for (int y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; x += 2) // Идем шагом по 2, так как пиксель "двойной"
+            for (int x = 0; x < width; x += 2)
             {
-                // Вычисляем правильный индекс чтения по X в зависимости от Flip
                 int readX = !_isFacingRight ? (width - 2 - x) : x;
 
-                // Берем пару символов, составляющих один консольный пиксель
                 char tileLeft = currentFrame[y, readX];
                 char tileRight = currentFrame[y, readX + 1];
 
-                // Отрисовка левой половинки пикселя
-                if (tileLeft != ' ')
-                {
-                    _renderer.DrawChar(_layer, (int)(_position.X + x), (int)(y + _position.Y), tileLeft);
-                }
-
-                // Отрисовка правой половинки пикселя
-                if (tileRight != ' ')
-                {
-                    _renderer.DrawChar(_layer, (int)(x + 1 + _position.X), (int)(y + _position.Y), tileRight);
-                }
+                if (tileLeft != ' ') _renderer.DrawChar(_layer, (int)(_position.X + x), (int)(y + _position.Y), tileLeft);
+                if (tileRight != ' ') _renderer.DrawChar(_layer, (int)(x + 1 + _position.X), (int)(y + _position.Y), tileRight);
             }
         }
 
         _animTimer += deltatime;
-
         if (_animTimer >= FRAME_DURATION)
         {
             _spriteIndex = (_spriteIndex + 1) % _targetAnimation.Count;
-
             _animTimer = 0;
         }
     }
 
-    private void Move(double deltatime)
-    {
-        // Накапливаем время движения
-        _multiplier += deltatime * _speed;
-
-        // Используем while на случай, если лаг был очень большим и нужно сделать больше 1 шага
-        while (_multiplier >= FRAME_DURATION)
-        {
-            // 1. Сначала проверяем, не упремся ли мы в стену НА СЛЕДУЮЩЕМ шаге (Look-ahead)
-            int nextPositionX = (int)(_position.X + _stepX);
-
-            if (nextPositionX >= _map.Width - _xOffset || nextPositionX <= 0)
-            {
-                _stepX = -_stepX; // Разворачиваемся ДО того, как физически сдвинулись
-            }
-
-            // 2. Теперь безопасно обновляем направление спрайта
-            _isFacingRight = _stepX < 0;
-
-            // 3. Делаем фактический шаг
-            _position.X += _stepX;
-
-            // 4. Правильно уменьшаем таймер, не теряя доли секунд
-            _multiplier -= FRAME_DURATION;
-        }
-    }
-
-    private void HandleMovement(double deltatime) => _position.X += _velocity.X * (deltatime * _speed);
-    private void UpdateCollider() => _collider.Position = new Vector2(_position.X, _position.Y);
-    
-    private void CheckGroundAndWalls(double deltaTime)
-    {
-        
-        _rightOrLeftWallRay.UpdatePosition(_position);
-        _downGroundRay.UpdatePosition(_position);
-
-        // проверка через колайдер
-        _isGroundRightOrLeftSide = _map.Blocks.Any(block => _rightOrLeftWallRay.CheckDetection(block.Collider));
-        GroundBlock? leftOrRightBlock =
-            _map.Blocks.FirstOrDefault(block => _rightOrLeftWallRay.CheckDetection(block.Collider));
-        _isGroundDown = _map.Blocks.Any(block => _downGroundRay.CheckDetection(block.Collider));
-        GroundBlock? downBlock = _map.Blocks.FirstOrDefault(block => _downGroundRay.CheckDetection(block.Collider));
-
-        Console.WriteLine(_isGroundDown);
-
-        if (_isGroundDown && downBlock != null)
-        {
-            _velocity.Y = 0;
-            _position.Y = downBlock.Position.Y - _yOffset - 1;
-        }
-
-        if (_isGroundRightOrLeftSide && leftOrRightBlock != null)
-        {
-            int targetOffsetX = _isFacingRight ? -_xOffset : _xOffset;
-            
-            _position.X = leftOrRightBlock.Position.X + targetOffsetX;
-            _isFacingRight = !_isFacingRight;
-            _velocity.X = _isFacingRight ? 1 : -1;
-        }
-    }
-
-
     private void UpdatePhysics(double deltatime)
     {
-        _position = _position + _velocity * deltatime;
         _velocity = _velocity + (_gravity * 1.8f) * deltatime;
-    }
-    
-    public void DrawGizmos(int offset = 16)
-    {
-        char isRightSymbol = _isGroundRightOrLeftSide ? '+' : '^';
-        _renderer.DrawLine(_layer, (int)_position.X + _xOffset / 2,
-            (int)_position.Y + _yOffset / 2,
-            (int)(int)_position.X + _xOffset / 2 + 16,
-            (int)_position.Y + _yOffset / 2, isRightSymbol);
-
-        char isGroundSymbol = _isGroundDown ? '+' : '-';
-        _renderer.DrawLine(_layer, (int)_downGroundRay.Position.X + _xOffset / 2,
-            (int)_downGroundRay.Position.Y,
-            (int)_downGroundRay.Position.X + _xOffset / 2,
-            (int)_downGroundRay.Position.Y + _yOffset, isGroundSymbol);
     }
 }
