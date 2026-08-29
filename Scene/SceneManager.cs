@@ -3,15 +3,15 @@ using MonochromeEngine.Utils;
 
 namespace MonochromeEngine.Scene;
 
-public static class SceneManager
+public class SceneManager : ISceneManager
 {
-    private static IScene _currentScene;
-    private static MonoRenderer _renderer;
-    private static int _mapWidth;
-    private static int _mapHeight;
-    private static List<char[,]> _layers;
+    private readonly Stack<IScene> _sceneStack = new Stack<IScene>();
+    private readonly MonoRenderer _renderer;
+    private readonly int _mapWidth;
+    private readonly int _mapHeight;
+    private readonly List<char[,]> _layers;
 
-    public static void Initialize(MonoRenderer renderer, int mapWidth, int mapHeight, List<char[,]> layers)
+    public SceneManager(MonoRenderer renderer, int mapWidth, int mapHeight, List<char[,]> layers)
     {
         _renderer = renderer;
         _mapWidth = mapWidth;
@@ -19,26 +19,43 @@ public static class SceneManager
         _layers = layers;
     }
 
-    public static void ChangeScene(IScene newScene)
+    public void PushScene(IScene scene)
     {
-        _currentScene = newScene;
-        _currentScene.Initialize();
+        _sceneStack.Push(scene);
+        _sceneStack.Peek().Initialize();
     }
 
-    public static void Update(double deltaTime)
+    public void PopScene()
     {
-        _currentScene?.Update(deltaTime);
-    }
-
-    public static void Draw()
-    {
-        if (_currentScene == null) 
+        if (_sceneStack.Count > 0)
         {
-            Console.WriteLine("SceneManager: CurrentScene is null!");
+            _sceneStack.Pop();
+        }
+    }
+
+    public void ChangeScene(IScene newScene)
+    {
+        if (_sceneStack.Count > 0)
+        {
+            _sceneStack.Pop();
+        }
+        PushScene(newScene);
+    }
+
+    public void Update(double deltaTime)
+    {
+        if (_sceneStack.Count > 0)
+        {
+            _sceneStack.Peek().Update(deltaTime);
+        }
+    }
+
+    public void Draw()
+    {
+        if (_sceneStack.Count == 0)
+        {
             return;
         }
-        
-        // Console.WriteLine("SceneManager: Drawing scene...");
         
         // 1. Очистка всех слоев кроме background (индекс 0) перед отрисовкой
         for (int i = 1; i < _layers.Count; i++)
@@ -47,7 +64,7 @@ public static class SceneManager
         }
         
         // 2. Отрисовываем сцену (объекты рисуют в слои)
-        _currentScene.Draw();
+        _sceneStack.Peek().Draw();
         
         // 3. Композиция и рендер
         var frame = _renderer.Compose(_mapWidth, _mapHeight, _layers.ToArray());

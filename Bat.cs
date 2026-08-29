@@ -1,5 +1,4 @@
 using MonochromeEngine.Animation;
-using MonochromeEngine.Collisions;
 using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
 using MonochromeEngine.Utils;
@@ -12,13 +11,13 @@ public class Bat : IUpdatable
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly Map _map;
-    private BoxCollider2D _collider;
+    private readonly BoxCollider2D _collider;
     
     // Sprites
-    private List<char[,]> _idleBase;
+    private readonly List<char[,]> _idleBase;
     private List<char[,]> _deathBase;
     private List<char[,]> _hitBase;
-    private List<char[,]> _targetAnimation;
+    private readonly List<char[,]> _targetAnimation;
 
     // Movement & Arc
     private Vector2 _startPosition;

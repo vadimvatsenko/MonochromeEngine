@@ -1,17 +1,16 @@
-﻿using MonochromeEngine.Engine;
-using MonochromeEngine.Engine.Collider;
+﻿using MonochromeEngine.Engine.Collider;
 using MonochromeEngine.Utils;
 
-namespace MonochromeEngine.Collisions;
+namespace MonochromeEngine.Engine;
 
-public class BaseCollisionSystem
+public class CollisionSystem
 {
     private readonly Map _map;
     private readonly Collider2D _collider;
     
     public bool IsGrounded { get; private set; }
 
-    public BaseCollisionSystem(Map map, Collider2D collider)
+    public CollisionSystem(Map map, Collider2D collider)
     {
         _map = map;
         _collider = collider;

@@ -2,19 +2,17 @@ using MonochromeEngine;
 using MonochromeEngine.Creatures;
 using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Levels;
+using MonochromeEngine.Scene;
 using MonochromeEngine.Utils;
 
 public class Program
 {
     public static void Main(string[] args)
     {
-        // 32 тайла в ширину 512 пикс
-        // 12 тайла высота / 192
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
         
         Input input = new Input();
-        
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
         Map map = new Map(576,208);
         MonoRenderer renderer = new MonoRenderer();
@@ -36,60 +34,15 @@ public class Program
             uiLayer
         };
 
-        Hero baseGameObject = new Hero(renderer, input, itemsLayer, spritesLoaderSystem, map);
-        Bat bat = new Bat(renderer, enemiesLayer, spritesLoaderSystem, map, new Vector2(100, 50));
-        Skeleton skeleton = new Skeleton(renderer, enemiesLayer, spritesLoaderSystem, map);
-
-        int stepBlocksX = 32;
-        int stepBlocksY = 16;
+        SceneManager sceneManager = new SceneManager(renderer, map.Width, map.Height, allLayers);
         
-        List<GroundBlock> allBlocks = new List<GroundBlock>();
+        // Temporarily create MainMenuScene or jump straight to Gameplay if MainMenu isn't fully refactored.
+        // Assuming we need to refactor MainMenuScene constructor first, which I will do in next turns.
+        // For now, let's push GameplayScene directly.
+        GameplayScene gameplayScene = new GameplayScene(sceneManager, input, renderer, spritesLoaderSystem, map, uiLayer, allLayers);
+        sceneManager.PushScene(gameplayScene);
 
-        // GetLength(0) — это количество СТРОК (высота карты по Y)
-        int mapHeight = LevelModel.Map11.GetLength(0);
-        // GetLength(1) — это количество СТОЛБЦОВ в строке (ширина карты по X)
-        int mapWidth = LevelModel.Map11.GetLength(1);
-
-        // 1. Внешний цикл ВСЕГДА идёт по Y (сверху вниз)
-        for (int y = 0; y < mapHeight; y++)
-        {
-            // 2. Внутренний цикл ВСЕГДА идёт по X (слева направо)
-            for (int x = 0; x < mapWidth; x++)
-            {
-                // Вытаскиваем ID тайла из массива по правильным индексам [строка, столбец]
-                int tileId = LevelModel.Map11[y, x];
-
-                // Если это 0 (воздух), блок создавать не нужно! Пропускаем итерацию.
-                if (tileId == 0) continue;
-
-                // Теперь координаты X и Y умножаются на свои шаги правильно
-                Vector2 pos = new Vector2(x * stepBlocksX, y * stepBlocksY);
-        
-                GroundBlock groundBlock = new GroundBlock(
-                    renderer, 
-                    groundLayer, 
-                    spritesLoaderSystem, 
-                    map, 
-                    pos,
-                    tileId - 1
-                );
-
-                allBlocks.Add(groundBlock);
-                map.SetBlock(groundBlock);
-            }
-        }
-        
-        Update update = new Update(60, renderer, map, input, allLayers);
-        
-        update.AddUpdatable(baseGameObject);
-        update.AddUpdatable(input);
-        update.AddUpdatable(bat);
-        update.AddUpdatable(skeleton);
-
-        foreach (var b in allBlocks)
-        {
-            update.AddUpdatable(b);
-        }
+        Update update = new Update(60, sceneManager);
         
         update.RunUpdate();
     }

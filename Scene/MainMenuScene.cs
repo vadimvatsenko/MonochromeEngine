@@ -1,9 +1,11 @@
 ﻿using MonochromeEngine.Engine;
-using MonochromeEngine.Scene;
 using MonochromeEngine.Utils;
+
+namespace MonochromeEngine.Scene;
 
 public class MainMenuScene : IScene
 {
+    private readonly ISceneManager _sceneManager;
     private readonly Input _input;
     private readonly MonoRenderer _renderer;
     private readonly char[,] _uiLayer;
@@ -14,9 +16,10 @@ public class MainMenuScene : IScene
     private readonly Map _map;
     private readonly List<char[,]> _allLayers;
 
-    public MainMenuScene(Input input, MonoRenderer renderer, char[,] uiLayer, FontService fontService, 
-                         SpritesLoaderSystem spritesLoaderSystem, Map map, List<char[,]> allLayers)
+    public MainMenuScene(ISceneManager sceneManager, Input input, MonoRenderer renderer, char[,] uiLayer, FontService fontService, 
+        SpritesLoaderSystem spritesLoaderSystem, Map map, List<char[,]> allLayers)
     {
+        _sceneManager = sceneManager;
         _input = input;
         _renderer = renderer;
         _uiLayer = uiLayer;
@@ -32,7 +35,7 @@ public class MainMenuScene : IScene
     {
         if (_input.GetKeyDown(ConsoleKey.Enter))
         {
-            SceneManager.ChangeScene(new GameplayScene(_input, _renderer, _spritesLoaderSystem, _map, _uiLayer, _allLayers));
+            _sceneManager.ChangeScene(new GameplayScene(_sceneManager, _input, _renderer, _spritesLoaderSystem, _map, _uiLayer, _allLayers));
         }
     }
 

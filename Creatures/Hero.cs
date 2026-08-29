@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using MonochromeEngine.Animation;
-using MonochromeEngine.Collisions;
 using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
 using MonochromeEngine.Utils;
@@ -12,7 +11,7 @@ public class Hero: IUpdatable
     private readonly Input _input;
     private readonly BoxCollider2D _collider;
     private readonly BaseAnimator _animator;
-    private readonly BaseCollisionSystem _collisionSystem;
+    private readonly CollisionSystem _collisionSystem;
     // Movement
     private Vector2 _position = new Vector2(32, 100);
     private int _stepX = 2;
@@ -41,7 +40,7 @@ public class Hero: IUpdatable
         
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
         _animator = new BaseAnimator(spritesLoaderSystem, renderer, "Hero", layer);
-        _collisionSystem = new BaseCollisionSystem(map, _collider);
+        _collisionSystem = new CollisionSystem(map, _collider);
     }
     
     public void Update(double deltatime)
@@ -123,10 +122,6 @@ public class Hero: IUpdatable
         }
     }
     
-    private void HandleMovement(double deltatime)
-    {
-    }
-
     private void Jump() => _velocity = new Vector2(_velocity.X, -120);
     
     private void UpdatePhysics(double deltatime)
@@ -134,8 +129,6 @@ public class Hero: IUpdatable
         // Теперь применяем только гравитацию к velocity
         _velocity = _velocity + (_gravity * 1.8f) * deltatime;
     }
-
-    private void UpdateCollider() => _collider.Position = new Vector2(_position.X, _position.Y);
     
     private void MoveRight()
     {

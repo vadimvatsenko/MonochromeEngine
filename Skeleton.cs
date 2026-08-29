@@ -1,5 +1,3 @@
-using MonochromeEngine.Animation;
-using MonochromeEngine.Collisions;
 using MonochromeEngine.Engine;
 using MonochromeEngine.Engine.Collider;
 using MonochromeEngine.Utils;
@@ -12,7 +10,7 @@ public class Skeleton : IUpdatable
     private readonly char[,] _layer;
     private readonly MonoRenderer _renderer;
     private readonly BoxCollider2D _collider;
-    private readonly BaseCollisionSystem _collisionSystem;
+    private readonly CollisionSystem _collisionSystem;
     private readonly Map _map;
     
     // Sprites
@@ -48,7 +46,7 @@ public class Skeleton : IUpdatable
 
         _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
         _map = map;
-        _collisionSystem = new BaseCollisionSystem(map, _collider);
+        _collisionSystem = new CollisionSystem(map, _collider);
 
         if (_spritesLoaderSystem.Sprites.TryGetValue("Skeleton", out Sprite sprites))
         {

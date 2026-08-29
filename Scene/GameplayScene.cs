@@ -15,9 +15,11 @@ public class GameplayScene : IScene
     private readonly char[,] _uiLayer;
     private List<IUpdatable> _updatables;
     private List<char[,]> _allLayers;
+    private readonly ISceneManager _sceneManager;
 
-    public GameplayScene(Input input, MonoRenderer renderer, SpritesLoaderSystem spritesLoaderSystem, Map map, char[,] uiLayer, List<char[,]> allLayers)
+    public GameplayScene(ISceneManager sceneManager, Input input, MonoRenderer renderer, SpritesLoaderSystem spritesLoaderSystem, Map map, char[,] uiLayer, List<char[,]> allLayers)
     {
+        _sceneManager = sceneManager;
         _input = input;
         _renderer = renderer;
         _spritesLoaderSystem = spritesLoaderSystem;
