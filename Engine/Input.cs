@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using MonochromeEngine.Engine;
+using MonochromeEngine.Engine.Tick;
 
 public class Input : IUpdatable
 {

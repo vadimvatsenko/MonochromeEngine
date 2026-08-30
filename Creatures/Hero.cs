@@ -1,25 +1,17 @@
-using System.Diagnostics;
-using MonochromeEngine.Animation;
 using MonochromeEngine.Engine;
-using MonochromeEngine.Engine.Collider;
-using MonochromeEngine.Utils;
+using MonochromeEngine.Engine.BaseObjects;
+using MonochromeEngine.Engine.Render;
+using MonochromeEngine.Engine.Tick;
+using MonochromeEngine.Engine.Utils;
 
 namespace MonochromeEngine.Creatures;
 
-public class Hero: IUpdatable
+public class Hero: GameObject, IUpdatable, IRenderable, ITarget
 {
     private readonly Input _input;
-    private readonly BoxCollider2D _collider;
-    private readonly BaseAnimator _animator;
-    private readonly CollisionSystem _collisionSystem;
+    private HealthComponent _healthComponent;
     // Movement
-    private Vector2 _position = new Vector2(32, 100);
-    private int _stepX = 2;
     private readonly float _speed = 100f;
-    private double _multiplier = 0;
-    private bool _isFacingRight = true;
-    private readonly int _xOffset = 32;
-    private readonly int _yOffset = 16;
     // jump logic
     private Vector2 _velocity = new Vector2(0, 0);
     private Vector2 _gravity = new Vector2(0, 100f);
@@ -32,21 +24,26 @@ public class Hero: IUpdatable
     private float _bufferJumpActivated = -1;
     private bool _isAirborne = false;
     
-    
-    public Hero(MonoRenderer renderer, Input input, char[,] layer, SpritesLoaderSystem spritesLoaderSystem,
-        Map map)
+    private bool _isHit = false;
+    private double _hitAnimTimer = 0;
+
+
+    public Hero(string name, 
+        Vector2 position, 
+        char[,] layer, 
+        Map map, 
+        MonoRenderer renderer, 
+        SpritesLoaderSystem spritesLoaderSystem, 
+        Input input) : base(name, position, layer, map, renderer, spritesLoaderSystem)
     {
         _input = input;
-        
-        _collider = new BoxCollider2D(_position, new Vector2(_xOffset, _yOffset));
-        _animator = new BaseAnimator(spritesLoaderSystem, renderer, "Hero", layer);
-        _collisionSystem = new CollisionSystem(map, _collider);
+        _healthComponent = new HealthComponent(100, 100);
     }
-    
+
     public void Update(double deltatime)
     {
         // Управление таймерами для прыжка
-        if (_collisionSystem.IsGrounded)
+        if (CollisionSystem.IsGrounded)
         {
             _coyoteJumpActivated = _coyoteJumpWindow;
         }
@@ -60,22 +57,34 @@ public class Hero: IUpdatable
             _bufferJumpActivated -= (float)deltatime;
         }
 
+        // Таймер Hit анимации
+        if (_hitAnimTimer > 0)
+        {
+            _hitAnimTimer -= deltatime;
+            if (_hitAnimTimer <= 0) _isHit = false;
+        }
+
         CheckInput(deltatime);
         UpdatePhysics(deltatime);
         
         // Передаем размер коллайдера и deltatime для корректного выталкивания
-        _collisionSystem.ResolveCollisions(ref _position, ref _velocity, new Vector2(_xOffset, _yOffset), deltatime);
+        CollisionSystem.ResolveCollisions(ref Position, ref _velocity, new Vector2(XOffset, YOffset), deltatime);
         
         // Автоматический прыжок, если сработал буфер и мы приземлились
-        if (_bufferJumpActivated > 0 && _collisionSystem.IsGrounded)
+        if (_bufferJumpActivated > 0 && CollisionSystem.IsGrounded)
         {
             Jump();
             _bufferJumpActivated = -1;
         }
         
-        _animator.RunAnimation(deltatime, _isFacingRight, _position);
+        Animator.UpdateAnimation(deltatime);
 
         SwitchAnimation();
+    }
+
+    public void Draw()
+    {
+        Animator.Draw(Position, IsFacingRight);
     }
 
     private void CheckInput(double deltatime)
@@ -100,29 +109,49 @@ public class Hero: IUpdatable
                 _bufferJumpActivated = _bufferJumpWindow;
             }
         }
+        
     }
     
     private void SwitchAnimation()
     {
-        if (_velocity.Y > 0.5)
+        // Анимация Hit имеет приоритет
+        if (_isHit)
         {
-            _animator.TargetAnimation = _animator.FallBase;
+            Animator.TargetAnimation = Animator.HitBase;
+        }
+        else if (_velocity.Y > 0.5)
+        {
+            Animator.TargetAnimation = Animator.FallBase;
         }
         else if (_velocity.Y < -0.5)
         {
-            _animator.TargetAnimation = _animator.JumpBase;
+            Animator.TargetAnimation = Animator.JumpBase;
         }
         else if (_velocity.X < -0.5 || _velocity.X > 0.5)
         {
-            _animator.TargetAnimation = _animator.MoveBase;
+            Animator.TargetAnimation = Animator.MoveBase;
         }
-        else if(_collisionSystem.IsGrounded)
+        else if(CollisionSystem.IsGrounded)
         {
-            _animator.TargetAnimation = _animator.IdleBase;
+            Animator.TargetAnimation = Animator.IdleBase;
         }
     }
     
-    private void Jump() => _velocity = new Vector2(_velocity.X, -120);
+    private void Jump()
+    {
+        _velocity = new Vector2(_velocity.X, -120);
+    }
+
+    public void TakeDamage(float damage)
+    {
+        _healthComponent.TakeDamage(damage);
+        _isHit = true;
+        _hitAnimTimer = 0.5; // Анимация длится 0.5 секунды
+        
+        // Knockback: отталкиваем игрока назад (если он смотрит вправо, отлетает влево)
+        float knockbackForce = 50f;
+        _velocity = new Vector2(IsFacingRight ? -knockbackForce : knockbackForce, -50f);
+    }
     
     private void UpdatePhysics(double deltatime)
     {
@@ -133,13 +162,13 @@ public class Hero: IUpdatable
     private void MoveRight()
     {
         _velocity = new Vector2(_speed, _velocity.Y);
-        _isFacingRight = true;
+        IsFacingRight = true;
     }
 
     private void MoveLeft()
     {
         _velocity = new Vector2(-_speed, _velocity.Y);
-        _isFacingRight = false;
+        IsFacingRight = false;
     }
     
     private void StopHorizontal(double deltaTime) => _velocity = new Vector2(0, _velocity.Y);
