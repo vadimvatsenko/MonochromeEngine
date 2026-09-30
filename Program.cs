@@ -42,7 +42,9 @@ public class Program
         
         sceneManager.PushScene(gameplayScene);
 
-        Update update = new Update(60, sceneManager);
+        // 50 кадров: герой бежит 100 символов/с, это ровно 2 символа (1 пиксель) за кадр —
+        // экран каждый кадр сдвигается на один пиксель, без пауз и рывков
+        Update update = new Update(50, sceneManager);
 
         update.RunUpdate();
     }
