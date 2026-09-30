@@ -106,8 +106,12 @@ public class BaseAnimator
         int height = currentFrame.GetLength(0);
         int width = currentFrame.GetLength(1);
 
-        // Позиция на экране = позиция в мире минус камера
-        int originX = (int)position.X - Camera.X;
+        // Позиция на экране = позиция в мире минус камера.
+        // X округляем вниз до чётного: пиксель спрайта — 2 символа, а камера ходит целыми пикселями.
+        // Иначе объект на полпикселя "дрожит" туда-обратно относительно фона
+        int worldX = (int)Math.Floor(position.X);
+        worldX -= worldX & 1;
+        int originX = worldX - Camera.X;
         int originY = (int)position.Y - Camera.Y;
 
         // Объект целиком за экраном — не рисуем: на длинном уровне таких тысячи
