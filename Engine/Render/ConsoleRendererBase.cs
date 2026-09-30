@@ -182,7 +182,7 @@ public abstract class ConsoleRendererBase : IRenderer
 
     // Выводим только клетки, изменившиеся с прошлого кадра: консоль — самое медленное место,
     // а небо и неподвижные блоки от кадра к кадру не меняются
-    public void Render(Cell[,] frame)
+    public virtual void Render(Cell[,] frame)
     {
         (int w, int h) = ScreenSize(frame.GetLength(1), frame.GetLength(0));
 

@@ -20,13 +20,16 @@ public class Program
         //   new ColorRenderer()          — цвет; окно консоли 576x208
         //   new HalfBlockColorRenderer() — цвет полублоками, почти в 2 раза быстрее;
         //                                  окно консоли 288x104 (шрифт вдвое крупнее)
-        // Для проверки режим можно выбрать и при запуске: MonochromeEngine.exe mono | color | half
+        //   new PaletteConsoleRenderer() — "как в DOS": 16 цветов, прямая запись в буфер консоли,
+        //                                  самый быстрый цвет; окно 288x104; только обычная консоль
+        // Для проверки режим можно выбрать и при запуске: MonochromeEngine.exe mono | color | half | palette
         IRenderer renderer = args.FirstOrDefault() switch
         {
             "mono" => new MonochromeRenderer(),
             "color" => new ColorRenderer(),
             "half" => new HalfBlockColorRenderer(),
-            _ => new ColorRenderer()
+            "palette" => new PaletteConsoleRenderer(),
+            _ => new PaletteConsoleRenderer()
         };
 
         Input input = new Input();
