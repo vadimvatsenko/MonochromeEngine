@@ -1,32 +1,14 @@
-using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MonochromeEngine.Engine.Render;
 
-// Цветной режим: любой цвет RGB через escape-коды консоли (ESC[38;2;R;G;Bm).
+// Цветной режим: любой цвет RGB через escape-коды консоли.
 // Работает в Windows Terminal и в обычной консоли Windows 10/11
 public class ColorRenderer : ConsoleRendererBase
 {
-    private const int StdOutputHandle = -11;
-    private const uint EnableVirtualTerminalProcessing = 0x0004;
-
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetStdHandle(int nStdHandle);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
-
-    public ColorRenderer()
-    {
-        // Старая консоль понимает цветовые коды только после включения этого режима
-        IntPtr handle = GetStdHandle(StdOutputHandle);
-        if (GetConsoleMode(handle, out uint mode))
-        {
-            SetConsoleMode(handle, mode | EnableVirtualTerminalProcessing);
-        }
-    }
+    private const int DefaultStyle = -2;
+    // Отметка "это текст": цвет букв, а не заливка клетки
+    private const int TextFlag = 1 << 24;
 
     // Чёрные пиксели тоже рисуются: контур героя закрывает траву за ним
     public override Cell PixelToCell(byte r, byte g, byte b, byte a) =>
@@ -34,39 +16,34 @@ public class ColorRenderer : ConsoleRendererBase
 
     public override Cell BackgroundCell(int rgb) => new Cell('█', rgb);
 
-    public override void Render(Cell[,] frame)
+    protected override void AppendCell(StringBuilder sb, Cell cell, ref int style)
     {
-        int h = frame.GetLength(0);
-        int w = frame.GetLength(1);
+        // Закрашенная клетка — это пробел с цветом фона: 1 байт вместо 3 у '█'
+        bool isBlock = cell.Symbol == '█';
+        int wanted = cell.IsEmpty ? DefaultStyle : isBlock ? cell.Color : cell.Color | TextFlag;
 
-        Sb.Clear();
-        for (int y = 0; y < h; y++)
+        if (wanted != style)
         {
-            // Код цвета пишем только когда цвет меняется — иначе строка вырастет в разы
-            int currentColor = -1;
-            for (int x = 0; x < w; x++)
+            style = wanted;
+            if (wanted == DefaultStyle)
             {
-                Cell c = frame[y, x];
-                if (c.IsEmpty)
-                {
-                    Sb.Append(' ');
-                    continue;
-                }
-
-                if (c.Color != currentColor)
-                {
-                    currentColor = c.Color;
-                    Sb.Append("\u001b[38;2;")
-                        .Append((c.Color >> 16) & 0xFF).Append(';')
-                        .Append((c.Color >> 8) & 0xFF).Append(';')
-                        .Append(c.Color & 0xFF).Append('m');
-                }
-                Sb.Append(c.Symbol);
+                sb.Append("\u001b[49m");
             }
-            // Сброс цвета в конце строки, чтобы не красить то, что консоль допишет после кадра
-            Sb.Append("\u001b[0m").AppendLine();
+            else if (isBlock)
+            {
+                AppendRgb(sb.Append("\u001b[48;2;"), cell.Color);
+            }
+            else
+            {
+                AppendRgb(sb.Append("\u001b[49;38;2;"), cell.Color);
+            }
         }
 
-        WriteFrame();
+        sb.Append(isBlock || cell.IsEmpty ? ' ' : cell.Symbol);
     }
+
+    protected override string ResetStyle => "\u001b[0m";
+
+    private static void AppendRgb(StringBuilder sb, int rgb) =>
+        sb.Append((rgb >> 16) & 0xFF).Append(';').Append((rgb >> 8) & 0xFF).Append(';').Append(rgb & 0xFF).Append('m');
 }

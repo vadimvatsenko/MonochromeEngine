@@ -12,6 +12,10 @@ public static class Camera
     {
         X = Math.Clamp((int)target.X - viewWidth / 2, 0, Math.Max(0, levelWidth - viewWidth));
         Y = Math.Clamp((int)target.Y - viewHeight / 2, 0, Math.Max(0, levelHeight - viewHeight));
+
+        // Пиксель спрайта — 2 символа в ширину. Сдвиг на нечётное число режет пиксели
+        // пополам, и картинка "дрожит" при движении, поэтому двигаем только на целые пиксели
+        X -= X % 2;
     }
 
     public static void Reset()

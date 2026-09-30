@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace MonochromeEngine.Engine.Render;
 
 // Чёрно-белый режим: светлые пиксели — '█', тёмные и прозрачные — пусто
@@ -14,22 +16,8 @@ public class MonochromeRenderer : ConsoleRendererBase
 
     public override Cell BackgroundCell(int rgb) => Cell.Empty;
 
-    public override void Render(Cell[,] frame)
-    {
-        int h = frame.GetLength(0);
-        int w = frame.GetLength(1);
+    protected override void AppendCell(StringBuilder sb, Cell cell, ref int style) =>
+        sb.Append(cell.IsEmpty ? ' ' : cell.Symbol);
 
-        Sb.Clear();
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                Cell c = frame[y, x];
-                Sb.Append(c.IsEmpty ? ' ' : c.Symbol);
-            }
-            Sb.AppendLine();
-        }
-
-        WriteFrame();
-    }
+    protected override string ResetStyle => "";
 }
