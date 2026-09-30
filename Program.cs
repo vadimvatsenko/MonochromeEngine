@@ -20,7 +20,14 @@ public class Program
         //   new ColorRenderer()          — цвет; окно консоли 576x208
         //   new HalfBlockColorRenderer() — цвет полублоками, почти в 2 раза быстрее;
         //                                  окно консоли 288x104 (шрифт вдвое крупнее)
-        IRenderer renderer = new ColorRenderer();
+        // Для проверки режим можно выбрать и при запуске: MonochromeEngine.exe mono | color | half
+        IRenderer renderer = args.FirstOrDefault() switch
+        {
+            "mono" => new MonochromeRenderer(),
+            "color" => new ColorRenderer(),
+            "half" => new HalfBlockColorRenderer(),
+            _ => new ColorRenderer()
+        };
 
         Input input = new Input();
         SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem(renderer);
