@@ -15,7 +15,11 @@ public class Program
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
 
-        // Режим отрисовки. Вернуть чёрно-белый: new MonochromeRenderer()
+        // Режим отрисовки (меняется только эта строка):
+        //   new MonochromeRenderer()     — чёрно-белый, как раньше; окно консоли 576x208
+        //   new ColorRenderer()          — цвет; окно консоли 576x208
+        //   new HalfBlockColorRenderer() — цвет полублоками, почти в 2 раза быстрее;
+        //                                  окно консоли 288x104 (шрифт вдвое крупнее)
         IRenderer renderer = new ColorRenderer();
 
         Input input = new Input();

@@ -4,8 +4,8 @@ using System.Text;
 
 namespace MonochromeEngine.Engine.Render;
 
-// Общая часть рендеров: работа со слоями и вывод кадра одинаковы, отличаются только
-// превращение пикселя в клетку и то, как одна клетка пишется в консоль
+// Общая часть рендеров: работа со слоями и вывод кадра одинаковы. Режимы отличаются только
+// превращением пикселя в клетку и тем, как клетки кадра становятся клетками экрана
 public abstract class ConsoleRendererBase : IRenderer
 {
     private const int StdOutputHandle = -11;
@@ -14,6 +14,11 @@ public abstract class ConsoleRendererBase : IRenderer
     // Консоль не показывает кадр, пока он не дописан целиком (где поддерживается) — картинка не "плывёт"
     private const string BeginSyncUpdate = "\u001b[?2026h";
     private const string EndSyncUpdate = "\u001b[?2026l";
+
+    // Цвета клетки экрана: обычный цвет консоли / не важно (у пробела не видно цвета букв)
+    protected const int DefaultColor = -1;
+    protected const int AnyColor = -2;
+    private const int UnknownColor = int.MinValue;
 
     [DllImport("kernel32.dll")]
     private static extern IntPtr GetStdHandle(int nStdHandle);
@@ -30,10 +35,28 @@ public abstract class ConsoleRendererBase : IRenderer
 
     private Cell[,]? _composed;
 
-    // Что сейчас на экране — выводим только отличия от него
-    private Cell[,]? _onScreen;
+    // Кадр, переведённый в клетки экрана, и то, что сейчас на экране — выводим только отличия
+    private ScreenCell[,]? _next;
+    private ScreenCell[,]? _onScreen;
     private int _windowWidth;
     private int _windowHeight;
+
+    // Клетка консоли, как она выводится: символ, цвет символа и цвет фона
+    protected readonly struct ScreenCell
+    {
+        public readonly char Symbol;
+        public readonly int Fg;
+        public readonly int Bg;
+
+        public ScreenCell(char symbol, int fg, int bg)
+        {
+            Symbol = symbol;
+            Fg = fg;
+            Bg = bg;
+        }
+
+        public bool SameAs(ScreenCell other) => Symbol == other.Symbol && Fg == other.Fg && Bg == other.Bg;
+    }
 
     protected ConsoleRendererBase()
     {
@@ -51,11 +74,11 @@ public abstract class ConsoleRendererBase : IRenderer
     public abstract Cell PixelToCell(byte r, byte g, byte b, byte a);
     public abstract Cell BackgroundCell(int rgb);
 
-    // Дописать одну клетку. style — текущий цвет консоли, чтобы не повторять код цвета
-    protected abstract void AppendCell(StringBuilder sb, Cell cell, ref int style);
+    // Сколько клеток экрана нужно под кадр такого размера (по умолчанию одна клетка кадра = одна клетка экрана)
+    protected virtual (int Width, int Height) ScreenSize(int frameWidth, int frameHeight) => (frameWidth, frameHeight);
 
-    // Код, возвращающий консоль к обычным цветам
-    protected abstract string ResetStyle { get; }
+    // Перевести весь кадр в клетки экрана (один вызов на кадр — быстрее, чем по вызову на клетку)
+    protected abstract void ToScreen(Cell[,] frame, ScreenCell[,] screen);
 
     // стрворить масив слоя
     public Cell[,] CreateLayer(int w, int h)
@@ -132,7 +155,7 @@ public abstract class ConsoleRendererBase : IRenderer
     }
 
     // Композитний кадр. Буфер кадра один на все кадры — не выделяем по мегабайту 60 раз в секунду.
-    // Render копирует клетки к себе, так что следующий Compose его спокойно перезаписывает
+    // Render переводит клетки к себе, так что следующий Compose его спокойно перезаписывает
     public Cell[,] Compose(int w, int h, params Cell[][,] layers)
     {
         if (_composed == null || _composed.GetLength(0) != h || _composed.GetLength(1) != w)
@@ -161,30 +184,36 @@ public abstract class ConsoleRendererBase : IRenderer
     // а небо и неподвижные блоки от кадра к кадру не меняются
     public void Render(Cell[,] frame)
     {
-        int h = frame.GetLength(0);
-        int w = frame.GetLength(1);
+        (int w, int h) = ScreenSize(frame.GetLength(1), frame.GetLength(0));
 
         // Первый кадр или окно консоли поменяло размер — перерисовываем всё
         bool full = _onScreen == null || _onScreen.GetLength(0) != h || _onScreen.GetLength(1) != w ||
                     Console.WindowWidth != _windowWidth || Console.WindowHeight != _windowHeight;
         if (full)
         {
-            _onScreen = new Cell[h, w];
+            _onScreen = new ScreenCell[h, w];
+            _next = new ScreenCell[h, w];
             _windowWidth = Console.WindowWidth;
             _windowHeight = Console.WindowHeight;
         }
-        Cell[,] onScreen = _onScreen!;
+        ScreenCell[,] onScreen = _onScreen!;
+        ScreenCell[,] next = _next!;
+
+        ToScreen(frame, next);
 
         _sb.Clear();
         _sb.Append(BeginSyncUpdate);
-        int style = -1; // цвет консоли неизвестен — первый же будет записан
+
+        // Цвета консоли неизвестны — первые же будут записаны
+        int fg = UnknownColor;
+        int bg = UnknownColor;
 
         for (int y = 0; y < h; y++)
         {
             int x = 0;
             while (x < w)
             {
-                if (!full && Same(frame[y, x], onScreen[y, x]))
+                if (!full && next[y, x].SameAs(onScreen[y, x]))
                 {
                     x++;
                     continue;
@@ -193,29 +222,50 @@ public abstract class ConsoleRendererBase : IRenderer
                 // Начало изменившегося куска — ставим курсор (строки и столбцы в консоли с 1)
                 _sb.Append("\u001b[").Append(y + 1).Append(';').Append(x + 1).Append('H');
 
-                while (x < w && (full || !Same(frame[y, x], onScreen[y, x]) || ChangedSoon(frame, onScreen, y, x, w)))
+                while (x < w && (full || !next[y, x].SameAs(onScreen[y, x]) || ChangedSoon(next, onScreen, y, x, w)))
                 {
-                    AppendCell(_sb, frame[y, x], ref style);
-                    onScreen[y, x] = frame[y, x];
+                    AppendCell(next[y, x], ref fg, ref bg);
+                    onScreen[y, x] = next[y, x];
                     x++;
                 }
             }
         }
 
-        _sb.Append(ResetStyle).Append(EndSyncUpdate);
+        _sb.Append("\u001b[0m").Append(EndSyncUpdate);
         WriteToConsole();
     }
 
-    private static bool Same(Cell a, Cell b) =>
-        a.IsEmpty ? b.IsEmpty : a.Symbol == b.Symbol && a.Color == b.Color;
+    // Код цвета пишем, только когда цвет меняется — иначе строка вырастет в разы
+    private void AppendCell(ScreenCell cell, ref int fg, ref int bg)
+    {
+        if (cell.Fg != AnyColor && cell.Fg != fg)
+        {
+            fg = cell.Fg;
+            if (fg == DefaultColor) _sb.Append("\u001b[39m");
+            else AppendRgb("\u001b[38;2;", fg);
+        }
+
+        if (cell.Bg != bg)
+        {
+            bg = cell.Bg;
+            if (bg == DefaultColor) _sb.Append("\u001b[49m");
+            else AppendRgb("\u001b[48;2;", bg);
+        }
+
+        _sb.Append(cell.Symbol);
+    }
+
+    private void AppendRgb(string prefix, int rgb) =>
+        _sb.Append(prefix).Append((rgb >> 16) & 0xFF).Append(';').Append((rgb >> 8) & 0xFF).Append(';')
+            .Append(rgb & 0xFF).Append('m');
 
     // Короткий неизменившийся промежуток дешевле переписать, чем прыгать курсором через него
-    private static bool ChangedSoon(Cell[,] frame, Cell[,] onScreen, int y, int x, int w)
+    private static bool ChangedSoon(ScreenCell[,] next, ScreenCell[,] onScreen, int y, int x, int w)
     {
         const int MaxGap = 6;
         for (int i = x; i < Math.Min(w, x + MaxGap); i++)
         {
-            if (!Same(frame[y, i], onScreen[y, i])) return true;
+            if (!next[y, i].SameAs(onScreen[y, i])) return true;
         }
         return false;
     }
