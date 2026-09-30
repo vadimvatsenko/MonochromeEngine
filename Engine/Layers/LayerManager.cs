@@ -54,8 +54,8 @@ public class LayerManager
         return new List<Cell[,]>()
         {
             _backgroundLayer,
-            _playerLayer,
             _groundLayer,
+            _playerLayer,
             _itemsLayer,
             _enemiesLayer,
             _uiLayer

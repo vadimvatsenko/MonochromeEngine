@@ -8,6 +8,10 @@ namespace MonochromeEngine;
 
 public class GroundBlock: GameObject, IUpdatable, IRenderable
 {
+    // Для склона: высота поверхности от верха блока (в строках) в каждом столбике пикселей.
+    // null — обычный квадратный блок
+    public int[]? SlopeHeights { get; set; }
+
     public GroundBlock(string name, 
         Vector2 position, 
         Cell[,] layer, 

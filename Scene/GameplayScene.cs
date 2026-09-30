@@ -73,6 +73,7 @@ public class GameplayScene : IScene
         int stepX = level.TileWidth * LevelLoader.CharsPerPixelX;
         int stepY = level.TileHeight * LevelLoader.CharsPerPixelY;
         HashSet<int> solid = level.Tileset.Solid.ToHashSet();
+        Dictionary<int, int[]> slopes = LevelLoader.FindSlopes(level);
 
         for (int y = 0; y < level.Ground.Length; y++)
         {
@@ -97,6 +98,10 @@ public class GameplayScene : IScene
                 // Сквозь твёрдые тайлы не пройти, остальные (трава, облака) — просто картинка.
                 // Тайлы не анимируются, поэтому в _updatables их не кладём
                 if (isSolid) _map.SetBlock(block);
+                if (slopes.TryGetValue(tileId, out int[]? heights))
+                {
+                    block.SlopeHeights = heights.Select(h => h * LevelLoader.CharsPerPixelY).ToArray();
+                }
                 _renderables.Add(block);
             }
         }
