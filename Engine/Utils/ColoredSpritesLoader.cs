@@ -37,7 +37,7 @@ public class ColoredSpritesLoader
                         string animDirFolderName = Path.GetFileName(dirAnimFolder);
                         string fullAnimationName = animFolderName + animDirFolderName;
                         
-                        var pngFiles = Directory.EnumerateFiles(dirAnimFolder, "*.png").OrderBy(f => f);
+                        var pngFiles = Directory.EnumerateFiles(dirAnimFolder, "*.png").OrderBy(SpritesLoaderSystem.NaturalSortKey);
 
                         foreach (var fileNamePath in pngFiles)
                         {

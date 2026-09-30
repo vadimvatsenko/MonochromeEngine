@@ -106,6 +106,17 @@ public class BaseAnimator
         int height = currentFrame.GetLength(0);
         int width = currentFrame.GetLength(1);
 
+        // Позиция на экране = позиция в мире минус камера
+        int originX = (int)position.X - Camera.X;
+        int originY = (int)position.Y - Camera.Y;
+
+        // Объект целиком за экраном — не рисуем: на длинном уровне таких тысячи
+        if (originX + width <= 0 || originY + height <= 0 ||
+            originX >= _layer.GetLength(1) || originY >= _layer.GetLength(0))
+        {
+            return;
+        }
+
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x += 2)
@@ -117,12 +128,12 @@ public class BaseAnimator
 
                 if (tileLeft != ' ')
                 {
-                    _renderer.DrawChar(_layer, (int)(position.X + x), (int)(y + position.Y), tileLeft);
+                    _renderer.DrawChar(_layer, originX + x, originY + y, tileLeft);
                 }
 
                 if (tileRight != ' ')
                 {
-                    _renderer.DrawChar(_layer, (int)(x + 1 + position.X), (int)(y + position.Y), tileRight);
+                    _renderer.DrawChar(_layer, originX + x + 1, originY + y, tileRight);
                 }
             }
         }

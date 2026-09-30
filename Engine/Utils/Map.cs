@@ -26,6 +26,13 @@ public class Map
         Hero = hero;
     }
 
+    // Перед постройкой уровня заново (иначе блоки прошлого запуска сцены остаются)
+    public void Clear()
+    {
+        Blocks.Clear();
+        Hero = null!;
+    }
+
     public bool IsBlockAt(int x, int y)
     {
         // Проверяем, попадает ли точка x, y в границы какого-либо коллайдера блока

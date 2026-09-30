@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using System.Text.RegularExpressions;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace MonochromeEngine.Engine.Utils;
@@ -48,9 +49,9 @@ public class SpritesLoaderSystem
                         // Собираем полное имя анимации ("IdleBase")
                         string fullAnimationName = animFolderName + animDirFolderName;
                         
-                        // Сортируем файлы по имени, чтобы кадры анимации (01.png, 02.png) шли строго по порядку!
+                        // Сортируем по номеру кадра: "(10).png" должен идти после "(9).png", а не после "(1).png"
                         var pngFiles = Directory.EnumerateFiles(dirAnimFolder, "*.png")
-                                                .OrderBy(f => f);
+                                                .OrderBy(NaturalSortKey);
 
                         foreach (var fileNamePath in pngFiles)
                         {
@@ -66,22 +67,45 @@ public class SpritesLoaderSystem
         }
     }
 
+    // Числа в имени дополняем нулями, чтобы строки сортировались как числа
+    public static string NaturalSortKey(string path) =>
+        Regex.Replace(Path.GetFileName(path), @"\d+", m => m.Value.PadLeft(10, '0'));
+
+    // Картинка тайлов уровня: режем на клетки, каждая клетка — кадр IdleBase,
+    // чтобы GroundBlock мог выбрать тайл по номеру кадра
+    public void AddTileset(string ownerName, string imagePath, int tileWidth, int tileHeight, int columns, int count)
+    {
+        using var img = Image.Load<Rgba32>(imagePath);
+        var sprite = new Sprite(ownerName);
+
+        for (int i = 0; i < count; i++)
+        {
+            int ox = i % columns * tileWidth;
+            int oy = i / columns * tileHeight;
+            sprite.AddAnimation("IdleBase", LoadCharMask2D(img, ox, oy, tileWidth, tileHeight));
+        }
+
+        _spritesMap[ownerName] = sprite;
+    }
+
     private char[,] LoadCharMask2D(string path, char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
     {
         using var img = Image.Load<Rgba32>(path);
-    
-        int spriteW = img.Width;
-        int spriteH = img.Height;
-    
+        return LoadCharMask2D(img, 0, 0, img.Width, img.Height, fillChar, emptyChar, threshold, invert);
+    }
+
+    private char[,] LoadCharMask2D(Image<Rgba32> img, int originX, int originY, int spriteW, int spriteH,
+        char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
+    {
         // Выделяем память: под каждый пиксель по ширине — 2 символа для "квадратности" в консоли
         var mask = new char[spriteH, spriteW * 2];
-    
+
         img.ProcessPixelRows(accessor => {
             for (int y = 0; y < spriteH; y++) {
-                var row = accessor.GetRowSpan(y);
-            
+                var row = accessor.GetRowSpan(originY + y);
+
                 for (int x = 0; x < spriteW; x++) {
-                    var p = row[x];
+                    var p = row[originX + x];
                 
                     // Проверяем на "светлый" или "темный". 
                     // Твои спрайты 1-битные (черно-белые). 

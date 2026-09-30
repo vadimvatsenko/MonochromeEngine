@@ -34,12 +34,136 @@ public class GameplayScene : IScene
         _layerManager = layerManager;
     }
 
+    // Файл уровня из редактора (папка Levels). Если файла нет — строится старый уровень Map11
+    private const string LevelFile = "level1.json";
+    private const string LevelTilesOwner = "LevelTiles";
+
+    // Размер всего уровня в символах — чтобы камера не выезжала за края
+    private int _levelWidth;
+    private int _levelHeight;
+
     public void Initialize()
     {
         _updatables = new List<IUpdatable>();
         _renderables = new List<IRenderable>();
+        _map.Clear();
+        Camera.Reset();
 
-        Hero hero 
+        LevelData? level = LevelLoader.TryLoad(LevelFile);
+        if (level != null)
+        {
+            BuildLevelFromFile(level);
+        }
+        else
+        {
+            BuildLegacyLevel();
+        }
+    }
+
+    private void BuildLevelFromFile(LevelData level)
+    {
+        _spritesLoaderSystem.AddTileset(LevelTilesOwner, Path.Combine(level.Directory, level.Tileset.Image),
+            level.TileWidth, level.TileHeight, level.Tileset.Columns, level.Tileset.Count);
+
+        int stepX = level.TileWidth * LevelLoader.CharsPerPixelX;
+        int stepY = level.TileHeight * LevelLoader.CharsPerPixelY;
+        HashSet<int> solid = level.Tileset.Solid.ToHashSet();
+
+        for (int y = 0; y < level.Ground.Length; y++)
+        {
+            for (int x = 0; x < level.Ground[y].Length; x++)
+            {
+                int tileId = level.Ground[y][x];
+                if (tileId <= 0 || tileId > level.Tileset.Count) continue;
+
+                // Украшения (трава, облака) — на фоновый слой, чтобы не закрывали героя
+                bool isSolid = solid.Contains(tileId);
+                RenderLayerType layer = isSolid ? RenderLayerType.Ground : RenderLayerType.Background;
+
+                GroundBlock block
+                    = new GroundBlock(LevelTilesOwner,
+                        new Vector2(x * stepX, y * stepY),
+                        _layerManager.GetLayerFromType(layer),
+                        _map,
+                        _renderer,
+                        _spritesLoaderSystem,
+                        tileId - 1);
+
+                // Сквозь твёрдые тайлы не пройти, остальные (трава, облака) — просто картинка.
+                // Тайлы не анимируются, поэтому в _updatables их не кладём
+                if (isSolid) _map.SetBlock(block);
+                _renderables.Add(block);
+            }
+        }
+
+        _levelWidth = level.Width * stepX;
+        _levelHeight = level.Height * stepY;
+
+        foreach (LevelEntity entity in level.Entities)
+        {
+            SpawnEntity(entity.Type,
+                new Vector2(entity.X * LevelLoader.CharsPerPixelX, entity.Y * LevelLoader.CharsPerPixelY));
+        }
+
+        // Герой нужен всегда: за ним едет камера, на него нападают враги
+        if (_map.Hero == null) SpawnEntity("Hero", new Vector2(60, 0));
+
+        _updatables.Add(_input);
+    }
+
+    private void SpawnEntity(string type, Vector2 position)
+    {
+        switch (type)
+        {
+            case "Hero":
+                Hero hero
+                    = new Hero("Hero",
+                        position,
+                        _layerManager.GetLayerFromType(RenderLayerType.Player),
+                        _map,
+                        _renderer,
+                        _spritesLoaderSystem,
+                        _input);
+                _map.SetHero(hero);
+                _updatables.Add(hero);
+                _renderables.Add(hero);
+                break;
+
+            case "Skeleton":
+                Skeleton skeleton
+                    = new Skeleton("Skeleton",
+                        position,
+                        _layerManager.GetLayerFromType(RenderLayerType.Enemies),
+                        _map,
+                        _renderer,
+                        _spritesLoaderSystem);
+                _updatables.Add(skeleton);
+                _renderables.Add(skeleton);
+                break;
+
+            case "Bat":
+                Bat bat
+                    = new Bat("Bat",
+                        position,
+                        _layerManager.GetLayerFromType(RenderLayerType.Enemies),
+                        _map,
+                        _renderer,
+                        _spritesLoaderSystem);
+                _updatables.Add(bat);
+                _renderables.Add(bat);
+                break;
+
+            // Для других типов (Carrot и т.п.) в движке пока нет класса — пропускаем
+        }
+    }
+
+    // Старый уровень, записанный в коде
+    private void BuildLegacyLevel()
+    {
+        _levelWidth = _map.Width;
+        _levelHeight = _map.Height;
+
+        Hero hero  
             = new Hero("Hero", 
                 new Vector2(60, 150), 
                 _layerManager.GetLayerFromType(RenderLayerType.Player), 
@@ -131,6 +255,14 @@ public class GameplayScene : IScene
         foreach (var updatable in _updatables)
         {
             updatable.Update(deltaTime);
+        }
+
+        if (_map.Hero != null)
+        {
+            // Камера смотрит в центр героя
+            var hero = _map.Hero.Collider;
+            Camera.Follow(new Vector2(hero.Position.X + hero.Size.X / 2, hero.Position.Y + hero.Size.Y / 2),
+                _map.Width, _map.Height, _levelWidth, _levelHeight);
         }
     }
 
