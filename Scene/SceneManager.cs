@@ -6,12 +6,12 @@ namespace MonochromeEngine.Scene;
 public class SceneManager : ISceneManager
 {
     private readonly Stack<IScene> _sceneStack = new Stack<IScene>();
-    private readonly MonoRenderer _renderer;
+    private readonly IRenderer _renderer;
     private readonly int _mapWidth;
     private readonly int _mapHeight;
-    private readonly List<char[,]> _layers;
+    private readonly List<Cell[,]> _layers;
 
-    public SceneManager(MonoRenderer renderer, int mapWidth, int mapHeight, List<char[,]> layers)
+    public SceneManager(IRenderer renderer, int mapWidth, int mapHeight, List<Cell[,]> layers)
     {
         _renderer = renderer;
         _mapWidth = mapWidth;

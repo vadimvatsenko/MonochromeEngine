@@ -30,9 +30,9 @@ public class Hero: GameObject, IUpdatable, IRenderable, ITarget
 
     public Hero(string name, 
         Vector2 position, 
-        char[,] layer, 
+        Cell[,] layer, 
         Map map, 
-        MonoRenderer renderer, 
+        IRenderer renderer, 
         SpritesLoaderSystem spritesLoaderSystem, 
         Input input) : base(name, position, layer, map, renderer, spritesLoaderSystem)
     {

@@ -15,10 +15,12 @@ public class Program
         Console.Title = "Monochrome Engine - Monochrome Engine";
         Console.CursorVisible = false;
 
+        // Режим отрисовки. Вернуть чёрно-белый: new MonochromeRenderer()
+        IRenderer renderer = new ColorRenderer();
+
         Input input = new Input();
-        SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem();
+        SpritesLoaderSystem spritesLoaderSystem = new SpritesLoaderSystem(renderer);
         Map map = new Map(576, 208);
-        MonoRenderer renderer = new MonoRenderer();
         
         LayerManager layerManager 
             = new LayerManager(renderer, map);

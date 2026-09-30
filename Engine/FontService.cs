@@ -13,7 +13,7 @@ public class FontService
     }
 
     // Метод для получения спрайта для конкретного символа
-    public char[,] GetCharSprite(char c)
+    public Cell[,] GetCharSprite(char c)
     {
         // В SpritesLoaderSystem имена собираются по структуре:
         // Папка "Fonts" -> Подпапка "MainFont" -> Имя анимации "IdleBase"
@@ -32,12 +32,12 @@ public class FontService
         return null;
     }
 
-    public void DrawText(MonoRenderer renderer, char[,] layer, string text, int x, int y)
+    public void DrawText(IRenderer renderer, Cell[,] layer, string text, int x, int y)
     {
         int cursorX = x;
         foreach (char c in text)
         {
-            char[,] charSprite = GetCharSprite(c);
+            Cell[,] charSprite = GetCharSprite(c);
             if (charSprite != null)
             {
                 // Итерируемся по маске спрайта и рисуем каждый символ
@@ -47,10 +47,10 @@ public class FontService
                 {
                     for (int sx = 0; sx < w; sx++)
                     {
-                        char pixel = charSprite[sy, sx];
-                        if (pixel != ' ') // Предполагаем ' ' - прозрачный пиксель
+                        Cell pixel = charSprite[sy, sx];
+                        if (!pixel.IsEmpty) // Предполагаем ' ' - прозрачный пиксель
                         {
-                            renderer.DrawChar(layer, cursorX + sx, y + sy, pixel);
+                            renderer.DrawCell(layer, cursorX + sx, y + sy, pixel);
                         }
                     }
                 }

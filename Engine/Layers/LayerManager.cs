@@ -5,17 +5,17 @@ namespace MonochromeEngine.Engine.Layers;
 
 public class LayerManager
 {
-    private readonly MonoRenderer _renderer;
+    private readonly IRenderer _renderer;
     private readonly Map _map;
     
-    private char[,] _playerLayer;
-    private char[,] _backgroundLayer;
-    private char[,] _groundLayer;
-    private char[,] _itemsLayer;
-    private char[,] _enemiesLayer;
-    private char[,] _uiLayer;
+    private Cell[,] _playerLayer;
+    private Cell[,] _backgroundLayer;
+    private Cell[,] _groundLayer;
+    private Cell[,] _itemsLayer;
+    private Cell[,] _enemiesLayer;
+    private Cell[,] _uiLayer;
 
-    public LayerManager(MonoRenderer renderer, Map map)
+    public LayerManager(IRenderer renderer, Map map)
     {
         _renderer = renderer;
         _map = map;
@@ -28,7 +28,7 @@ public class LayerManager
         _uiLayer = _renderer.CreateLayer(map.Width, map.Height);
     }
     
-    public char[,] GetLayerFromType(RenderLayerType type)
+    public Cell[,] GetLayerFromType(RenderLayerType type)
     {
         switch (type)
         {
@@ -49,9 +49,9 @@ public class LayerManager
         }
     }
 
-    public List<char[,]> GetAllLayers()
+    public List<Cell[,]> GetAllLayers()
     {
-        return new List<char[,]>()
+        return new List<Cell[,]>()
         {
             _backgroundLayer,
             _playerLayer,

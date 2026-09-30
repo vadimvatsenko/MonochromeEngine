@@ -11,7 +11,7 @@ namespace MonochromeEngine.Scene;
 public class GameplayScene : IScene
 {
     private readonly Input _input;
-    private readonly MonoRenderer _renderer;
+    private readonly IRenderer _renderer;
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
     private readonly Map _map;
     
@@ -21,7 +21,7 @@ public class GameplayScene : IScene
     private readonly LayerManager _layerManager;
 
     public GameplayScene(ISceneManager sceneManager, 
-        Input input, MonoRenderer renderer, 
+        Input input, IRenderer renderer, 
         SpritesLoaderSystem spritesLoaderSystem, 
         Map map, 
         LayerManager layerManager)
@@ -41,6 +41,8 @@ public class GameplayScene : IScene
     // Размер всего уровня в символах — чтобы камера не выезжала за края
     private int _levelWidth;
     private int _levelHeight;
+    // Чем залит фон: в цвете — цветом неба из файла уровня, в ч/б — пусто
+    private Cell _backgroundCell;
 
     public void Initialize()
     {
@@ -62,6 +64,9 @@ public class GameplayScene : IScene
 
     private void BuildLevelFromFile(LevelData level)
     {
+        int background = level.Background.StartsWith('#') ? Convert.ToInt32(level.Background[1..], 16) : 0;
+        _backgroundCell = _renderer.BackgroundCell(background);
+
         _spritesLoaderSystem.AddTileset(LevelTilesOwner, Path.Combine(level.Directory, level.Tileset.Image),
             level.TileWidth, level.TileHeight, level.Tileset.Columns, level.Tileset.Count);
 
@@ -160,6 +165,7 @@ public class GameplayScene : IScene
     // Старый уровень, записанный в коде
     private void BuildLegacyLevel()
     {
+        _backgroundCell = _renderer.BackgroundCell(0x000000);
         _levelWidth = _map.Width;
         _levelHeight = _map.Height;
 
@@ -269,7 +275,7 @@ public class GameplayScene : IScene
     public void Draw()
     {
         // Заполняем фоновый слой, чтобы не было черноты
-        _renderer.Fill(_layerManager.GetLayerFromType(RenderLayerType.Background), ' ');
+        _renderer.Fill(_layerManager.GetLayerFromType(RenderLayerType.Background), _backgroundCell);
         
         foreach (var renderable in _renderables)
         {

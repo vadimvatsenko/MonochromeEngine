@@ -12,8 +12,8 @@ public class GameObject
     protected BaseAnimator Animator;
     protected CollisionSystem CollisionSystem;
     protected Map Map;
-    protected char[,] Layer;
-    private MonoRenderer _renderer;
+    protected Cell[,] Layer;
+    private IRenderer _renderer;
     private SpritesLoaderSystem _spritesLoaderSystem;
     
     // Movement
@@ -22,7 +22,7 @@ public class GameObject
     protected readonly int XOffset = 32;
     protected readonly int YOffset = 16;
 
-    public GameObject(string name, Vector2 position, char[,] layer, Map map, MonoRenderer renderer,
+    public GameObject(string name, Vector2 position, Cell[,] layer, Map map, IRenderer renderer,
         SpritesLoaderSystem spritesLoaderSystem)
     {
         _name = name;

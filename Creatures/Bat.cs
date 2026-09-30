@@ -27,9 +27,9 @@ public class Bat : GameObject, IUpdatable, IRenderable
     public Bat(
         string name, 
         Vector2 position, 
-        char[,] layer, 
+        Cell[,] layer, 
         Map map, 
-        MonoRenderer renderer, 
+        IRenderer renderer, 
         SpritesLoaderSystem spritesLoaderSystem) : base(name, position, layer, map, renderer, spritesLoaderSystem)
     {
         Animator.TargetAnimation = Animator.IdleBase;

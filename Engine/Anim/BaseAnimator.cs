@@ -6,24 +6,24 @@ namespace MonochromeEngine.Engine.Anim;
 public class BaseAnimator
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
-    private readonly MonoRenderer _renderer;
-    private readonly char[,] _layer;
+    private readonly IRenderer _renderer;
+    private readonly Cell[,] _layer;
     private bool _isStatic = false;
     private readonly string _name;
     
     // Sprites
-    public List<char[,]> IdleBase { get; private set; }
-    public List<char[,]> MoveBase { get; private set; }
-    public List<char[,]> AttackBase { get; private set; }
-    public List<char[,]> DeathBase { get; private set; }
-    public List<char[,]> JumpBase { get; private set; }
-    public List<char[,]> FallBase { get; private set; }
-    public List<char[,]> HitBase { get; private set; }
-    public List<char[,]> BowBase {get; private set; }
+    public List<Cell[,]> IdleBase { get; private set; }
+    public List<Cell[,]> MoveBase { get; private set; }
+    public List<Cell[,]> AttackBase { get; private set; }
+    public List<Cell[,]> DeathBase { get; private set; }
+    public List<Cell[,]> JumpBase { get; private set; }
+    public List<Cell[,]> FallBase { get; private set; }
+    public List<Cell[,]> HitBase { get; private set; }
+    public List<Cell[,]> BowBase {get; private set; }
 
-    private List<char[,]> _targetAnimation;
+    private List<Cell[,]> _targetAnimation;
 
-    public List<char[,]> TargetAnimation
+    public List<Cell[,]> TargetAnimation
     {
         get { return _targetAnimation; }
         set { _targetAnimation = value; }
@@ -39,9 +39,9 @@ public class BaseAnimator
     
     public BaseAnimator
         (SpritesLoaderSystem spritesLoaderSystem, 
-            MonoRenderer renderer, 
+            IRenderer renderer, 
             string name, 
-            char[,] layer, 
+            Cell[,] layer, 
             bool isStatic = false)
     {
         _name = name;
@@ -123,17 +123,17 @@ public class BaseAnimator
             {
                 int readX = !isFacingRight ? (width - 2 - x) : x;
 
-                char tileLeft = currentFrame[y, readX];
-                char tileRight = currentFrame[y, readX + 1];
+                Cell tileLeft = currentFrame[y, readX];
+                Cell tileRight = currentFrame[y, readX + 1];
 
-                if (tileLeft != ' ')
+                if (!tileLeft.IsEmpty)
                 {
-                    _renderer.DrawChar(_layer, originX + x, originY + y, tileLeft);
+                    _renderer.DrawCell(_layer, originX + x, originY + y, tileLeft);
                 }
 
-                if (tileRight != ' ')
+                if (!tileRight.IsEmpty)
                 {
-                    _renderer.DrawChar(_layer, originX + x + 1, originY + y, tileRight);
+                    _renderer.DrawCell(_layer, originX + x + 1, originY + y, tileRight);
                 }
             }
         }

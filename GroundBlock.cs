@@ -10,9 +10,9 @@ public class GroundBlock: GameObject, IUpdatable, IRenderable
 {
     public GroundBlock(string name, 
         Vector2 position, 
-        char[,] layer, 
+        Cell[,] layer, 
         Map map, 
-        MonoRenderer renderer, 
+        IRenderer renderer, 
         SpritesLoaderSystem spritesLoaderSystem,
         int spriteIndex
         ) : base(name, position, layer, map, renderer, spritesLoaderSystem)

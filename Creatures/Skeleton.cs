@@ -23,9 +23,9 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
 
     public Skeleton(string name,
         Vector2 position,
-        char[,] layer,
+        Cell[,] layer,
         Map map,
-        MonoRenderer renderer,
+        IRenderer renderer,
         SpritesLoaderSystem spritesLoaderSystem) : base(name, position, layer, map, renderer, spritesLoaderSystem)
     {
         Animator.TargetAnimation = Animator.MoveBase;

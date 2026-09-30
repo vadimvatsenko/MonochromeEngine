@@ -6,17 +6,17 @@ namespace MonochromeEngine.Engine.Anim;
 public class TextAnimator
 {
     private readonly SpritesLoaderSystem _spritesLoaderSystem;
-    private readonly MonoRenderer _renderer;
-    private readonly char[,] _layer;
+    private readonly IRenderer _renderer;
+    private readonly Cell[,] _layer;
     private bool _isStatic = false;
     private readonly string _name;
     
     private const string WORDS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private Dictionary<char, List<char[,]>> _wordsDictionary = new Dictionary<char, List<char[,]>>();
+    private Dictionary<char, List<Cell[,]>> _wordsDictionary = new Dictionary<char, List<Cell[,]>>();
     
-    private List<char[,]> _targetAnimation;
+    private List<Cell[,]> _targetAnimation;
 
-    public List<char[,]> TargetAnimation
+    public List<Cell[,]> TargetAnimation
     {
         get { return _targetAnimation; }
         set { _targetAnimation = value; }
@@ -30,7 +30,7 @@ public class TextAnimator
     private const double FRAME_DURATION = 0.125;
     
     
-    public TextAnimator(SpritesLoaderSystem spritesLoaderSystem, MonoRenderer renderer, string name, char[,] layer, bool isStatic = false)
+    public TextAnimator(SpritesLoaderSystem spritesLoaderSystem, IRenderer renderer, string name, Cell[,] layer, bool isStatic = false)
     {
         _name = name;
         _renderer = renderer;
@@ -75,19 +75,19 @@ public class TextAnimator
                 int readX = !isFacingRight ? (width - 2 - x) : x;
 
                 // Берем пару символов, составляющих один консольный пиксель
-                char tileLeft = currentFrame[y, readX];
-                char tileRight = currentFrame[y, readX + 1];
+                Cell tileLeft = currentFrame[y, readX];
+                Cell tileRight = currentFrame[y, readX + 1];
 
                 // Отрисовка левой половинки пикселя
-                if (tileLeft != ' ')
+                if (!tileLeft.IsEmpty)
                 {
-                    _renderer.DrawChar(_layer, (int)(position.X + x), (int)(y + position.Y), tileLeft);
+                    _renderer.DrawCell(_layer, (int)(position.X + x), (int)(y + position.Y), tileLeft);
                 }
 
                 // Отрисовка правой половинки пикселя
-                if (tileRight != ' ')
+                if (!tileRight.IsEmpty)
                 {
-                    _renderer.DrawChar(_layer, (int)(x + 1 + position.X), (int)(y + position.Y), tileRight);
+                    _renderer.DrawCell(_layer, (int)(x + 1 + position.X), (int)(y + position.Y), tileRight);
                 }
             }
         }

@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using MonochromeEngine.Engine.Render;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -9,9 +10,12 @@ public class SpritesLoaderSystem
     // Теперь храним спрайты в словаре по имени владельца (Owner) для мгновенного доступа
     private readonly Dictionary<string, Sprite> _spritesMap = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
     private readonly string path = Path.Combine("..", "..", "..", "Sprites");
-    
-    public SpritesLoaderSystem()
+    // Рендер решает, какие пиксели прозрачные и какого цвета клетки (ч/б или цвет)
+    private readonly IRenderer _renderer;
+
+    public SpritesLoaderSystem(IRenderer renderer)
     {
+        _renderer = renderer;
         AllPathes();
     }
     
@@ -56,7 +60,7 @@ public class SpritesLoaderSystem
                         foreach (var fileNamePath in pngFiles)
                         {
                             // Конвертируем картинку в текстовую маску
-                            char[,] currentFrame = LoadCharMask2D(fileNamePath);
+                            Cell[,] currentFrame = LoadCharMask2D(fileNamePath);
                             
                             // Добавляем кадр в ОДИН И ТОТ ЖЕ объект этого владельца
                             currentOwnerSprite.AddAnimation(fullAnimationName, currentFrame);
@@ -88,17 +92,16 @@ public class SpritesLoaderSystem
         _spritesMap[ownerName] = sprite;
     }
 
-    private char[,] LoadCharMask2D(string path, char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
+    private Cell[,] LoadCharMask2D(string path)
     {
         using var img = Image.Load<Rgba32>(path);
-        return LoadCharMask2D(img, 0, 0, img.Width, img.Height, fillChar, emptyChar, threshold, invert);
+        return LoadCharMask2D(img, 0, 0, img.Width, img.Height);
     }
 
-    private char[,] LoadCharMask2D(Image<Rgba32> img, int originX, int originY, int spriteW, int spriteH,
-        char fillChar = '█', char emptyChar = ' ', byte threshold = 128, bool invert = false)
+    private Cell[,] LoadCharMask2D(Image<Rgba32> img, int originX, int originY, int spriteW, int spriteH)
     {
-        // Выделяем память: под каждый пиксель по ширине — 2 символа для "квадратности" в консоли
-        var mask = new char[spriteH, spriteW * 2];
+        // Выделяем память: под каждый пиксель по ширине — 2 клетки для "квадратности" в консоли
+        var mask = new Cell[spriteH, spriteW * 2];
 
         img.ProcessPixelRows(accessor => {
             for (int y = 0; y < spriteH; y++) {
@@ -106,16 +109,10 @@ public class SpritesLoaderSystem
 
                 for (int x = 0; x < spriteW; x++) {
                     var p = row[originX + x];
-                
-                    // Проверяем на "светлый" или "темный". 
-                    // Твои спрайты 1-битные (черно-белые). 
-                    // Если картинка на черном фоне (как на скриншоте), то пиксели персонажей — белые.
-                    // Давай проверять яркость (R > threshold), либо подкрутим invert.
-                    bool isActiveColor = p.A >= 10 && (p.R > threshold || p.G > threshold || p.B > threshold);
-                
-                    if (invert) isActiveColor = !isActiveColor;
-                
-                    char c = isActiveColor ? fillChar : emptyChar;
+
+                    // Прозрачный пиксель или нет и какого цвета — решает рендер:
+                    // в ч/б тёмные пиксели пустые, в цвете рисуются чёрным
+                    Cell c = _renderer.PixelToCell(p.R, p.G, p.B, p.A);
                 
                     // Пишем два символа рядом, чтобы пиксель в консоли был квадратным
                     int xx = x * 2; 
