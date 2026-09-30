@@ -13,6 +13,8 @@
 
     <ItemGroup>
       <Folder Include="IMG\" />
+      <Folder Include="Sprites\BackGround\" />
+      <Folder Include="Sprites\Traps\" />
       <Folder Include="UI\" />
     </ItemGroup>
 

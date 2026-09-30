@@ -137,7 +137,7 @@ public class GameplayScene : IScene
     public void Draw()
     {
         // Заполняем фоновый слой, чтобы не было черноты
-        _renderer.Fill(_layerManager.GetLayerFromType(RenderLayerType.Background), '░');
+        _renderer.Fill(_layerManager.GetLayerFromType(RenderLayerType.Background), ' ');
         
         foreach (var renderable in _renderables)
         {

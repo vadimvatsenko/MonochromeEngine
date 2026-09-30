@@ -21,17 +21,17 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
     private Vector2 _gravity = new Vector2(0, 100f);
 
 
-    public Skeleton(string name, 
-        Vector2 position, 
-        char[,] layer, 
-        Map map, 
-        MonoRenderer renderer, 
+    public Skeleton(string name,
+        Vector2 position,
+        char[,] layer,
+        Map map,
+        MonoRenderer renderer,
         SpritesLoaderSystem spritesLoaderSystem) : base(name, position, layer, map, renderer, spritesLoaderSystem)
     {
         Animator.TargetAnimation = Animator.MoveBase;
         CombatCollider = new BoxCollider2D(Position, new Vector2(20, 16));
     }
-    
+
     public void Update(double deltatime)
     {
         // Таймеры
@@ -78,7 +78,8 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
         }
 
         // Обновляем позицию боевого коллайдера
-        CombatCollider.Position = new Vector2(Position.X + (IsFacingRight ? _attackOffset.X : -_attackOffset.X), Position.Y);
+        CombatCollider.Position =
+            new Vector2(Position.X + (IsFacingRight ? _attackOffset.X : -_attackOffset.X), Position.Y);
 
         // Проверка атаки
         if (Map.Hero != null && _attackCooldownTimer <= 0 && CombatCollider.IsColliding(Map.Hero.Collider))
@@ -87,7 +88,7 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
             _attackCooldownTimer = 1.5; // Перезарядка атаки
             _attackAnimTimer = 0.5; // Длительность анимации
             _velocity.X = 0;
-            
+
         }
 
         Animator.UpdateAnimation(deltatime);
@@ -104,7 +105,7 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
             Animator.TargetAnimation = Animator.MoveBase;
         else if (_velocity.X == 0)
             Animator.TargetAnimation = Animator.IdleBase;
-        else if(_isAttacking)
+        else if (_isAttacking)
         {
             Animator.TargetAnimation = Animator.AttackBase;
         }
@@ -114,4 +115,4 @@ public class Skeleton : GameObject, IUpdatable, IRenderable
     {
         _velocity = _velocity + (_gravity * 1.8f) * deltatime;
     }
-    }
+}
