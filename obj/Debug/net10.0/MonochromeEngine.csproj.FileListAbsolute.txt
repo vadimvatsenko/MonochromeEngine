@@ -16,3 +16,8 @@ P:\Projects and Documents\Visual Studio Apps\MonochromeEngine\MonochromeEngine\o
 P:\Projects and Documents\Visual Studio Apps\MonochromeEngine\MonochromeEngine\obj\Debug\net10.0\MonochromeEngine.pdb
 P:\Projects and Documents\Visual Studio Apps\MonochromeEngine\MonochromeEngine\obj\Debug\net10.0\MonochromeEngine.genruntimeconfig.cache
 P:\Projects and Documents\Visual Studio Apps\MonochromeEngine\MonochromeEngine\obj\Debug\net10.0\ref\MonochromeEngine.dll
+C:\Users\user\AppData\Local\Temp\claude\P--Projects-and-Documents-Visual-Studio-Apps--Utils-TileSlicer\8c523d05-d4de-43a8-8ffd-05fd9f530677\scratchpad\enginebuild\MonochromeEngine.exe
+C:\Users\user\AppData\Local\Temp\claude\P--Projects-and-Documents-Visual-Studio-Apps--Utils-TileSlicer\8c523d05-d4de-43a8-8ffd-05fd9f530677\scratchpad\enginebuild\MonochromeEngine.deps.json
+C:\Users\user\AppData\Local\Temp\claude\P--Projects-and-Documents-Visual-Studio-Apps--Utils-TileSlicer\8c523d05-d4de-43a8-8ffd-05fd9f530677\scratchpad\enginebuild\MonochromeEngine.runtimeconfig.json
+C:\Users\user\AppData\Local\Temp\claude\P--Projects-and-Documents-Visual-Studio-Apps--Utils-TileSlicer\8c523d05-d4de-43a8-8ffd-05fd9f530677\scratchpad\enginebuild\MonochromeEngine.dll
+C:\Users\user\AppData\Local\Temp\claude\P--Projects-and-Documents-Visual-Studio-Apps--Utils-TileSlicer\8c523d05-d4de-43a8-8ffd-05fd9f530677\scratchpad\enginebuild\MonochromeEngine.pdb

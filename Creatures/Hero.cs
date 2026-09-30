@@ -139,7 +139,7 @@ public class Hero: GameObject, IUpdatable, IRenderable, ITarget
     
     private void Jump()
     {
-        _velocity = new Vector2(_velocity.X, -120);
+        _velocity = new Vector2(_velocity.X, -240);
     }
 
     public void TakeDamage(float damage)
